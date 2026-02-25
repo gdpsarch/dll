@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="d3n1GDPS — Top Hardest Levels List. The official ranked list of the hardest Geometry Dash levels on the d3n1 private server.">
+  <title>d3n1GDPS — Hardest Level List</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+
+  <header class="site-header">
+
+    <div class="header-logo">
+      d3n1GDPS <span>v1.0</span>
+    </div>
+
+    <nav class="header-nav">
+      <a href="#" class="nav-item active">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h2v12H2V2zm4 3h2v9H6V5zm4-2h2v11h-2V3z"/></svg>
+        List
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>
+        Leaderboard
+      </a>
+    </nav>
+
+    <div class="header-spacer"></div>
+
+    <div class="header-actions">
+
+      <button class="btn-solid" id="open-submit-btn-header">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l3 5H5zm0 14l-3-5h6zM1 8l5-3v6zm14 0l-5 3V5z"/></svg>
+        <span>Submit Level</span>
+      </button>
+
+      <a href="https://denigdpswww.ps.fhgdps.com/dashboard" target="_blank" rel="noopener" class="btn-outline">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm5-3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H5zm1 2h4v2H6V7z"/></svg>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="https://t.me/denigdps" target="_blank" rel="noopener" class="btn-outline">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M22.265 2.428a1.61 1.61 0 0 0-1.64-.22L2.1 9.94a1.61 1.61 0 0 0 .07 2.98l4.51 1.49 1.93 5.62a1 1 0 0 0 1.73.28l2.6-2.93 4.87 3.56a1.61 1.61 0 0 0 2.49-1.09L22.9 4.04a1.61 1.61 0 0 0-.635-1.612zM10 15.53l-1.09-3.18 7.08-6.72-5.99 9.9zm1.17 3.17l-.93-2.71 1.61 1.18-0.68 1.53zM20.18 5.03l-8.84 8.4L7.5 12l12.1-7.6-.42.63z"/></svg>
+        <span>Telegram</span>
+      </a>
+
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle dark/light mode">🌙</button>
+    </div>
+  </header>
+
+  <div class="page-layout">
+
+    <aside class="sidebar-left" role="complementary" aria-label="Level list">
+
+      <div class="sidebar-search">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="search-input" placeholder="Search by level name..." autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="level-list" id="level-list" role="list"></div>
+    </aside>
+
+    <main class="main-content" id="main-content">
+
+      <article class="level-detail" id="level-detail">
+
+        <div class="level-detail-header">
+          <img class="level-detail-icon" id="detail-icon" src="assets/difficulty/na.svg" alt="difficulty icon">
+          <div class="level-detail-title-group">
+            <h1 class="level-detail-title" id="detail-title">Loading...</h1>
+            <p class="level-detail-rank" id="detail-rank">Rank #— · Level ID: —</p>
+          </div>
+        </div>
+
+        <div class="level-meta-grid">
+          <div class="level-meta-item">
+            <div class="level-meta-label">Creator</div>
+            <div class="level-meta-value" id="detail-creator">—</div>
+          </div>
+          <div class="level-meta-item">
+            <div class="level-meta-label">Verifier</div>
+            <div class="level-meta-value" id="detail-verifier">—</div>
+          </div>
+          <div class="level-meta-item">
+            <div class="level-meta-label">Publisher</div>
+            <div class="level-meta-value" id="detail-publisher">—</div>
+          </div>
+        </div>
+
+        <div class="level-tags">
+          <span class="level-tag" id="detail-diff-tag">—</span>
+          <span class="level-tag">Level ID: <span id="detail-level-id">—</span></span>
+        </div>
+
+        <div class="detail-tabs">
+          <button class="detail-tab active" data-tab="verification">Verification</button>
+          <button class="detail-tab" data-tab="showcase">Showcase</button>
+        </div>
+
+        <div class="tab-pane active" data-tab="verification">
+          <div class="video-container">
+            <iframe id="verify-frame"
+              src=""
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              loading="lazy"
+              title="Verification Video">
+            </iframe>
+          </div>
+        </div>
+
+        <div class="tab-pane" data-tab="showcase">
+          <div class="video-container">
+            <iframe id="showcase-frame"
+              src=""
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              loading="lazy"
+              title="Showcase Video">
+            </iframe>
+          </div>
+        </div>
+
+      </article>
+
+    </main>
+
+    <aside class="sidebar-right" role="complementary" aria-label="Information panel">
+
+      <div class="sidebar-callout">
+        Interested in harder levels? Check out the
+        <a href="https://tsl.pages.dev" target="_blank" rel="noopener">Shitty List Plus</a>.
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">List Editors</div>
+        <div class="editor-list">
+          <div class="editor-item"><span class="editor-icon editor-crown">👑</span> d3n1 Owner</div>
+          <div class="editor-item"><span class="editor-icon editor-admin">🛡</span> Moderator 1</div>
+          <div class="editor-item"><span class="editor-icon editor-admin">🛡</span> Moderator 2</div>
+          <div class="editor-item"><span class="editor-icon">🛡</span> Moderator 3</div>
+          <div class="editor-item"><span class="editor-icon">🛡</span> Moderator 4</div>
+          <div class="editor-item"><span class="editor-icon">&lt;/&gt;</span> Developer</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <button class="sidebar-submit-btn" id="open-submit-btn">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l3 5H5zm0 14l-3-5h6zM1 8l5-3v6zm14 0l-5 3V5z"/></svg>
+          Submit a Level
+        </button>
+        <p class="sidebar-credits" style="margin-top:8px">Credits to RobtopGames for the difficulty faces</p>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Links</div>
+        <div class="editor-list">
+          <a href="https://denigdpswww.ps.fhgdps.com/dashboard" target="_blank" rel="noopener" class="editor-item">
+            <span class="editor-icon">🖥</span> Dashboard
+          </a>
+          <a href="https://t.me/denigdps" target="_blank" rel="noopener" class="editor-item">
+            <span class="editor-icon">✈️</span> Telegram
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <div class="modal-overlay" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">Submit a Level</h2>
+        <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <form id="submit-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="f-name">Level Name</label>
+          <input class="form-input" id="f-name" type="text" placeholder="e.g. Sonic Wave" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-levelid">Level ID</label>
+          <input class="form-input" id="f-levelid" type="text" placeholder="e.g. 123456789" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-creator">Creator</label>
+          <input class="form-input" id="f-creator" type="text" placeholder="Level creator's name" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-video">Video Link</label>
+          <input class="form-input" id="f-video" type="url" placeholder="https://youtu.be/..." required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-notes">Additional Notes <span style="opacity:.5;font-weight:400">(optional)</span></label>
+          <input class="form-input" id="f-notes" type="text" placeholder="Any additional information..." autocomplete="off">
+        </div>
+        <button type="submit" class="form-submit-btn" id="submit-form-btn">Send to Moderators</button>
+        <div class="form-status" id="form-status"></div>
+      </form>
+    </div>
+  </div>
+  <script src="js/admin.js" defer></script>
+  <script src="js/main.js" defer></script>
+
+</body>
+</html>
