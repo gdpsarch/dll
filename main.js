@@ -1,6 +1,6 @@
 'use strict';
 
-let levelsData = [];
+let levelsData   = [];
 let filteredData = [];
 let activeIndex  = 0;
 let activeTab    = 'verification';
