@@ -1,6 +1,6 @@
 'use strict';
 
-const levelsData = require('../levels.json');
+let levelsData = await (await fetch('./levels.json')).json();
 let filteredData = [];
 let activeIndex  = 0;
 let activeTab    = 'verification';
