@@ -37,14 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadLevels() {
   try {
-    const cached = localStorage.getItem('dll-levels-override');
-    if (cached) {
-      levelsData = JSON.parse(cached);
-    } else {
-      const res = await fetch('levels.json');
-      if (!res.ok) throw new Error('Network error');
-      levelsData = await res.json();
-    }
+    const res = await fetch('./levels.json?v=' + Date.now());
+    if (!res.ok) throw new Error('Network error');
+    levelsData = await res.json();
     filteredData = [...levelsData];
     renderList(filteredData);
     if (filteredData.length) selectLevel(0);
@@ -182,6 +177,34 @@ function attachEventListeners() {
   });
 }
 
+async function sendToWebhook(payload) {
+  const BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE';
+  const CHAT_ID = 'YOUR_CHAT_ID_HERE';
+  const URL = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  
+  const text = `<b>New Level Submission</b>\n\n` +
+               `Name: ${payload.name}\n` +
+               `ID: ${payload.levelId}\n` +
+               `Creator: ${payload.creator}\n` +
+               `Link: ${payload.videoLink}\n` +
+               `Notes: ${payload.notes}`;
+
+  try {
+    const response = await fetch(URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: text,
+        parse_mode: 'HTML'
+      })
+    });
+    return response.ok;
+  } catch (err) {
+    return false;
+  }
+}
+
 async function handleSubmit(e) {
   e.preventDefault();
   const btn    = $('submit-form-btn');
@@ -200,12 +223,12 @@ async function handleSubmit(e) {
 
   const sent = await sendToWebhook(payload);
   if (sent) {
-    status.textContent = '✅ Submitted successfully! Moderators will review your entry.';
+    status.textContent = '✅ Submitted successfully!';
     status.className = 'form-status success';
     e.target.reset();
     setTimeout(closeSubmitModal, 2500);
   } else {
-    status.textContent = '❌ Failed to send. Check your connection or try again later.';
+    status.textContent = '❌ Failed to send. Check configuration.';
     status.className = 'form-status error';
   }
   status.style.display = 'block';
