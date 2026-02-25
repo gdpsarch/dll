@@ -1,6 +1,6 @@
 'use strict';
 
-let levelsData = await (await fetch('./levels.json')).json();
+let levelsData = [];
 let filteredData = [];
 let activeIndex  = 0;
 let activeTab    = 'verification';
