@@ -8,7 +8,6 @@ const DIFFICULTIES = [
   'insane','harder','hard','normal','easy','auto'
 ];
 
-// Webhook sender
 window.sendToWebhook = async function(payload) {
   if (!WEBHOOK_URL) { console.warn('[DLL] No webhook configured.'); return false; }
   try {
@@ -45,7 +44,6 @@ function injectAdminPanel() {
 #_adm{display:none;position:fixed;inset:0;background:rgba(0,0,6,.85);backdrop-filter:blur(14px);z-index:9999;align-items:center;justify-content:center;padding:16px;}
 #_adm.open{display:flex;}
 @keyframes _admIn{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
-/* ── Password card ── */
 #_adm-pw-wrap{width:100%;max-width:380px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;box-shadow:0 32px 80px rgba(0,0,0,.65);overflow:hidden;animation:_admIn .26s cubic-bezier(.4,0,.2,1);}
 #_adm-pw-top{background:var(--accent);padding:36px 28px 26px;text-align:center;}
 .adm-lock-icon{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:1.55rem;margin:0 auto 14px;}
@@ -63,7 +61,6 @@ function injectAdminPanel() {
 #_adm-login-btn.loading{opacity:.65;pointer-events:none;}
 .adm-cancel{display:block;text-align:center;margin-top:14px;font-size:.75rem;color:var(--text-muted);cursor:pointer;letter-spacing:.3px;}
 .adm-cancel:hover{color:var(--text-primary);}
-/* ── Editor ── */
 #_adm-editor-wrap{width:100%;max-width:900px;max-height:92vh;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;box-shadow:0 32px 80px rgba(0,0,0,.65);display:flex;flex-direction:column;overflow:hidden;animation:_admIn .26s cubic-bezier(.4,0,.2,1);}
 #_adm-head{background:var(--accent);color:#fff;padding:13px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
 #_adm-head h2{font-family:'Rajdhani',sans-serif;font-size:1.05rem;font-weight:700;letter-spacing:1.8px;flex:1;}
@@ -73,7 +70,6 @@ function injectAdminPanel() {
 #_adm-x{width:29px;height:29px;border-radius:50%;background:rgba(255,255,255,.18);border:none;color:#fff;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .14s;flex-shrink:0;}
 #_adm-x:hover{background:rgba(255,255,255,.3);}
 #_adm-body{flex:1;overflow:hidden;display:flex;flex-direction:column;}
-/* visual pane */
 #_adm-vis{display:flex;flex-direction:column;overflow:hidden;flex:1;}
 #_adm-vis.hidden,#_adm-json.hidden{display:none;}
 .adm-bar{padding:11px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;}
@@ -87,7 +83,6 @@ function injectAdminPanel() {
 .adm-cnt{font-size:.77rem;font-weight:700;color:var(--text-muted);background:var(--bg-hover);padding:4px 10px;border-radius:20px;}
 .adm-st{font-size:.77rem;font-weight:700;padding:4px 12px;border-radius:8px;opacity:0;transition:opacity .3s;}
 .adm-st.show{opacity:1;}.adm-st.ok{background:rgba(0,200,100,.12);color:#00c864;}.adm-st.err{background:rgba(255,60,60,.1);color:#ff4c4c;}
-/* card list */
 #_adm-list{overflow-y:auto;flex:1;padding:12px 20px;display:flex;flex-direction:column;gap:5px;}
 .adm-card{display:flex;align-items:center;gap:11px;padding:10px 13px;background:var(--bg-sidebar);border:1px solid var(--border-card);border-radius:10px;cursor:default;transition:border-color .13s,box-shadow .13s;animation:_admIn .18s ease;}
 .adm-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
@@ -105,7 +100,6 @@ function injectAdminPanel() {
 .adm-ab.del:hover{background:rgba(255,60,60,.1);color:#ff4c4c;}
 .adm-empty{text-align:center;padding:60px 20px;color:var(--text-muted);font-size:.88rem;}
 .adm-empty-i{font-size:2.5rem;margin-bottom:10px;}
-/* slide-up form */
 #_adm-form-ov{display:none;position:absolute;inset:0;z-index:10;background:rgba(0,0,0,.38);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;}
 #_adm-form-ov.open{display:flex;}
 #_adm-form-box{width:100%;max-width:900px;background:var(--bg-card);border-top:1px solid var(--border);border-radius:20px 20px 0 0;box-shadow:0 -14px 48px rgba(0,0,0,.28);animation:_formUp .22s cubic-bezier(.4,0,.2,1);max-height:88vh;overflow-y:auto;}
@@ -122,12 +116,10 @@ function injectAdminPanel() {
 .adm-fi:focus,.adm-fs:focus{border-color:var(--accent);}
 .adm-fi::placeholder{color:var(--text-muted);}
 .adm-ffoot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:var(--bg-card);z-index:1;}
-/* JSON pane */
 #_adm-json{display:flex;flex-direction:column;overflow:hidden;flex:1;}
 .adm-jtb{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .adm-jhint{font-size:.74rem;color:var(--text-muted);flex:1;line-height:1.4;}
 #_adm-jta{flex:1;padding:16px 20px;border:none;outline:none;resize:none;background:var(--bg-page);color:var(--text-primary);font-family:'Courier New',monospace;font-size:.78rem;line-height:1.75;}
-/* scrollbars */
 #_adm-list::-webkit-scrollbar,#_adm-form-box::-webkit-scrollbar,#_adm-jta::-webkit-scrollbar{width:4px;}
 #_adm-list::-webkit-scrollbar-thumb,#_adm-form-box::-webkit-scrollbar-thumb,#_adm-jta::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
 `;
@@ -137,7 +129,6 @@ function injectAdminPanel() {
   overlay.id = '_adm';
   overlay.setAttribute('aria-hidden','true');
   overlay.innerHTML = `
-    <!-- Password screen -->
     <div id="_adm-pw-wrap">
       <div id="_adm-pw-top">
         <div class="adm-lock-icon">🔐</div>
@@ -155,7 +146,6 @@ function injectAdminPanel() {
       </div>
     </div>
 
-    <!-- Editor panel (hidden until auth) -->
     <div id="_adm-editor-wrap" style="display:none">
       <div id="_adm-head">
         <h2>⚙ LIST EDITOR</h2>
@@ -167,7 +157,6 @@ function injectAdminPanel() {
       </div>
       <div id="_adm-body">
 
-        <!-- VISUAL PANE -->
         <div id="_adm-vis">
           <div class="adm-bar">
             <div class="adm-bar-l">
@@ -183,7 +172,6 @@ function injectAdminPanel() {
           </div>
           <div id="_adm-list"></div>
 
-          <!-- Slide-up edit form -->
           <div id="_adm-form-ov">
             <div id="_adm-form-box">
               <div id="_adm-form-hd">
@@ -213,7 +201,6 @@ function injectAdminPanel() {
           </div>
         </div>
 
-        <!-- JSON PANE -->
         <div id="_adm-json" class="hidden">
           <div class="adm-jtb">
             <span class="adm-jhint">Raw JSON — edit then click Apply to sync back to the visual editor.</span>
@@ -228,7 +215,6 @@ function injectAdminPanel() {
 
   document.body.appendChild(overlay);
 
-  // — events —
   document.getElementById('_adm-pi').addEventListener('keydown', e => { if(e.key==='Enter') attemptLogin(); });
   document.getElementById('_adm-login-btn').addEventListener('click', attemptLogin);
   document.getElementById('_adm-cancel').addEventListener('click', closeAdmin);
