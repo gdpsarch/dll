@@ -1,11 +1,10 @@
 'use strict';
 
 const WEBHOOK_URL = '8712706690:AAGauu7o62qSg3ivMwV8X6744txmg9Gum9Y';
-const ADMIN_HASH  = '0a79f5a6a5c7b502769ba04b562a8721d57adaa2830a5720323dac07412059ff';
+const ADMIN_HASH  = '587ae57a0296a35139faad7a4140e980e36763957cf5f85735fce54c2cd4ba88';
 
 const DIFFICULTIES = [
-  'extreme_demon','insane_demon','hard_demon','medium_demon','easy_demon',
-  'insane','harder','hard','normal','easy','auto'
+  'extreme_demon'
 ];
 
 window.sendToWebhook = async function(payload) {
@@ -181,7 +180,7 @@ function injectAdminPanel() {
               <div class="adm-fgrid">
                 <div class="adm-fg"><label class="adm-fl">Rank #</label><input class="adm-fi" id="_ff-rank" type="number" min="1" placeholder="1"></div>
                 <div class="adm-fg"><label class="adm-fl">Level ID</label><input class="adm-fi" id="_ff-lid" type="text" placeholder="98765432"></div>
-                <div class="adm-fg full"><label class="adm-fl">Level Name</label><input class="adm-fi" id="_ff-name" type="text" placeholder="e.g. Sonic Wave Infinity"></div>
+                <div class="adm-fg full"><label class="adm-fl">Level Name</label><input class="adm-fi" id="_ff-name" type="text" placeholder="e.g. Sonic Wave"></div>
                 <div class="adm-fg">
                   <label class="adm-fl">Difficulty</label>
                   <select class="adm-fs" id="_ff-diff">
