@@ -1,213 +1,239 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="d3n1GDPS — Top Hardest Levels List. The official ranked list of the hardest Geometry Dash levels on the d3n1 private server.">
-  <title>d3n1GDPS — Hardest Level List</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link rel="stylesheet" href="css/style.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>d3n1GDPS — Top Hardest Levels</title>
+  <meta name="description" content="The Official Top Hardest Levels list for d3n1GDPS private Geometry Dash server." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
   <header class="site-header">
+    <div class="header-inner">
 
-    <div class="header-logo">
-      d3n1GDPS <span>v1.0</span>
-    </div>
+      <div class="header-left">
+        <span class="logo">DLL<span class="logo-accent">
+        <span class="version">v1.0.0</span>
+      </div>
 
-    <nav class="header-nav">
-      <a href="#" class="nav-item active">
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h2v12H2V2zm4 3h2v9H6V5zm4-2h2v11h-2V3z"/></svg>
-        List
-      </a>
-      <a href="#" class="nav-item">
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>
-        Leaderboard
-      </a>
-    </nav>
+      <nav class="header-nav">
+        <a href="#" class="nav-link active">List</a>
+        <a href="https://denigdpswww.ps.fhgdps.com/dashboard" target="_blank" rel="noopener" class="nav-link">Dashboard</a>
+        <a href="https://t.me/denigdps" target="_blank" rel="noopener" class="nav-link">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+          Telegram
+        </a>
+        <button id="themeToggle" class="nav-icon-btn" title="Toggle theme">
+          <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+        </button>
+      </nav>
 
-    <div class="header-spacer"></div>
+      <div class="header-actions">
+        <button id="submitBtn" class="btn-submit">Submit Level</button>
+      </div>
 
-    <div class="header-actions">
-
-      <button class="btn-solid" id="open-submit-btn-header">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l3 5H5zm0 14l-3-5h6zM1 8l5-3v6zm14 0l-5 3V5z"/></svg>
-        <span>Submit Level</span>
-      </button>
-
-      <a href="https://denigdpswww.ps.fhgdps.com/dashboard" target="_blank" rel="noopener" class="btn-outline">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm5-3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H5zm1 2h4v2H6V7z"/></svg>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="https://t.me/denigdps" target="_blank" rel="noopener" class="btn-outline">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M22.265 2.428a1.61 1.61 0 0 0-1.64-.22L2.1 9.94a1.61 1.61 0 0 0 .07 2.98l4.51 1.49 1.93 5.62a1 1 0 0 0 1.73.28l2.6-2.93 4.87 3.56a1.61 1.61 0 0 0 2.49-1.09L22.9 4.04a1.61 1.61 0 0 0-.635-1.612zM10 15.53l-1.09-3.18 7.08-6.72-5.99 9.9zm1.17 3.17l-.93-2.71 1.61 1.18-0.68 1.53zM20.18 5.03l-8.84 8.4L7.5 12l12.1-7.6-.42.63z"/></svg>
-        <span>Telegram</span>
-      </a>
-
-      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle dark/light mode">🌙</button>
     </div>
   </header>
 
-  <div class="page-layout">
+  <div class="layout">
 
-    <aside class="sidebar-left" role="complementary" aria-label="Level list">
-
-      <div class="sidebar-search">
-        <span class="search-icon">🔍</span>
-        <input type="search" id="search-input" placeholder="Search by level name..." autocomplete="off" spellcheck="false">
+    <aside class="sidebar-left">
+      <div class="sidebar-search-wrap">
+        <input type="text" id="searchInput" class="sidebar-search" placeholder="Search by level name..." />
       </div>
-
-      <div class="level-list" id="level-list" role="list"></div>
+      <div class="sidebar-list" id="sidebarList">
+        <div class="sk-item" style="--d:0"></div>
+        <div class="sk-item" style="--d:1"></div>
+        <div class="sk-item" style="--d:2"></div>
+        <div class="sk-item" style="--d:3"></div>
+        <div class="sk-item" style="--d:4"></div>
+        <div class="sk-item" style="--d:5"></div>
+        <div class="sk-item" style="--d:6"></div>
+        <div class="sk-item" style="--d:7"></div>
+        <div class="sk-item" style="--d:8"></div>
+      </div>
     </aside>
 
-    <main class="main-content" id="main-content">
+    <main class="main-content" id="mainContent">
 
-      <article class="level-detail" id="level-detail">
+      <div class="main-placeholder" id="mainPlaceholder">
+        <div class="placeholder-icon">
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <p>Select a level from the list</p>
+      </div>
 
-        <div class="level-detail-header">
-          <img class="level-detail-icon" id="detail-icon" src="assets/difficulty/na.svg" alt="difficulty icon">
-          <div class="level-detail-title-group">
-            <h1 class="level-detail-title" id="detail-title">Loading...</h1>
-            <p class="level-detail-rank" id="detail-rank">Rank #— · Level ID: —</p>
-          </div>
+      <div class="main-error hidden" id="mainError">
+        <div class="placeholder-icon">⚠</div>
+        <p id="errorMsg">Failed to load. Check Supabase config in app.js</p>
+      </div>
+
+      <div class="level-detail hidden" id="levelDetail">
+
+        <div class="detail-header">
+          <img id="detailDiffImg" src="" alt="" class="detail-diff-img"
+               onerror="this.style.visibility='hidden'" />
+          <h1 id="detailName" class="detail-name">—</h1>
         </div>
 
-        <div class="level-meta-grid">
-          <div class="level-meta-item">
-            <div class="level-meta-label">Creator</div>
-            <div class="level-meta-value" id="detail-creator">—</div>
-          </div>
-          <div class="level-meta-item">
-            <div class="level-meta-label">Verifier</div>
-            <div class="level-meta-value" id="detail-verifier">—</div>
-          </div>
-          <div class="level-meta-item">
-            <div class="level-meta-label">Publisher</div>
-            <div class="level-meta-value" id="detail-publisher">—</div>
-          </div>
+        <div class="detail-meta">
+          <div class="meta-row"><span class="meta-key">CREATOR</span><span class="meta-val" id="detailCreator">—</span></div>
+          <div class="meta-row"><span class="meta-key">VERIFIER</span><span class="meta-val" id="detailVerifier">—</span></div>
+          <div class="meta-row"><span class="meta-key">PUBLISHER</span><span class="meta-val" id="detailPublisher">—</span></div>
+          <div class="meta-row"><span class="meta-key">LEVEL ID</span><span class="meta-val" id="levelIdValue">—</span></div>
+      </div>
+
+        <div class="video-tabs">
+          <button class="vtab active" data-tab="verification">Showcase</button>
+          <button class="vtab" data-tab="showcase" id="showcaseTabBtn" style="display:none">Showcase</button>
         </div>
 
-        <div class="level-tags">
-          <span class="level-tag" id="detail-diff-tag">—</span>
-          <span class="level-tag">Level ID: <span id="detail-level-id">—</span></span>
+        <div class="video-wrapper">
+          <iframe id="detailVideo" src="" title="Level showcase"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen loading="lazy"></iframe>
         </div>
 
-        <div class="detail-tabs">
-          <button class="detail-tab active" data-tab="verification">Verification</button>
-          <button class="detail-tab" data-tab="showcase">Showcase</button>
-        </div>
-
-        <div class="tab-pane active" data-tab="verification">
-          <div class="video-container">
-            <iframe id="verify-frame"
-              src=""
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen
-              loading="lazy"
-              title="Verification Video">
-            </iframe>
-          </div>
-        </div>
-
-        <div class="tab-pane" data-tab="showcase">
-          <div class="video-container">
-            <iframe id="showcase-frame"
-              src=""
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen
-              loading="lazy"
-              title="Showcase Video">
-            </iframe>
-          </div>
-        </div>
-
-      </article>
-
+      </div>
     </main>
 
-    <aside class="sidebar-right" role="complementary" aria-label="Information panel">
+    <aside class="sidebar-right">
 
-      <div class="sidebar-callout">
-        Interested in harder levels? Check out the
-        <a href="https://tsl.pages.dev" target="_blank" rel="noopener">Shitty List Plus</a>.
+      <div class="right-card" id="levelInfoCard" style="display:none">
+        <p id="levelInfoText"></p>
       </div>
 
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">List Editors</div>
-        <div class="editor-list">
-          <div class="editor-item"><span class="editor-icon editor-crown">👑</span> d3n1 Owner</div>
-          <div class="editor-item"><span class="editor-icon editor-admin">🛡</span> Moderator 1</div>
-          <div class="editor-item"><span class="editor-icon editor-admin">🛡</span> Moderator 2</div>
-          <div class="editor-item"><span class="editor-icon">🛡</span> Moderator 3</div>
-          <div class="editor-item"><span class="editor-icon">🛡</span> Moderator 4</div>
-          <div class="editor-item"><span class="editor-icon">&lt;/&gt;</span> Developer</div>
-        </div>
+      <div class="right-section">
+        <h3 class="right-title">List Editors</h3>
+        <ul class="editors-list">
+          <li><span class="role-icon">👑</span> d3n1_owner</li>
+        </ul>
       </div>
 
-      <div class="sidebar-section">
-        <button class="sidebar-submit-btn" id="open-submit-btn">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l3 5H5zm0 14l-3-5h6zM1 8l5-3v6zm14 0l-5 3V5z"/></svg>
-          Submit a Level
-        </button>
-        <p class="sidebar-credits" style="margin-top:8px">Credits to RobtopGames for the difficulty faces</p>
+      <div class="right-section">
+        <h3 class="right-title">Stats</h3>
+        <div class="stat-row"><span class="stat-label">Total levels</span><span class="stat-val" id="statTotal">—</span></div>
+        <div class="stat-row"><span class="stat-label">Unique verifiers</span><span class="stat-val" id="statVerif">—</span></div>
       </div>
 
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Links</div>
-        <div class="editor-list">
-          <a href="https://denigdpswww.ps.fhgdps.com/dashboard" target="_blank" rel="noopener" class="editor-item">
-            <span class="editor-icon">🖥</span> Dashboard
-          </a>
-          <a href="https://t.me/denigdps" target="_blank" rel="noopener" class="editor-item">
-            <span class="editor-icon">✈️</span> Telegram
-          </a>
-        </div>
+      <div class="right-section">
+        <a href="#" id="submissionReq" class="right-link">Submission Requirements</a>
       </div>
 
     </aside>
   </div>
 
-  <div class="modal-overlay" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-overlay hidden" id="submitModal">
     <div class="modal-box">
-      <div class="modal-header">
-        <h2 class="modal-title" id="modal-title">Submit a Level</h2>
-        <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
+      <button class="modal-close" id="submitModalClose">✕</button>
+      <h2>Submit a Level</h2>
+      <p class="modal-sub">Think your level belongs here? Send it for review! (but this is not working yet)</p>
+      <div class="form-group">
+        <label>Level Name <span class="req">*</span></label>
+        <input type="text" id="sub_name" class="form-input" placeholder="Enter level name" />
       </div>
-
-      <form id="submit-form" novalidate>
-        <div class="form-group">
-          <label class="form-label" for="f-name">Level Name</label>
-          <input class="form-input" id="f-name" type="text" placeholder="e.g. Sonic Wave" required autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="f-levelid">Level ID</label>
-          <input class="form-input" id="f-levelid" type="text" placeholder="e.g. 123456789" required autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="f-creator">Creator</label>
-          <input class="form-input" id="f-creator" type="text" placeholder="Level creator's name" required autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="f-video">Video Link</label>
-          <input class="form-input" id="f-video" type="url" placeholder="https://youtu.be/..." required autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="f-notes">Additional Notes <span style="opacity:.5;font-weight:400">(optional)</span></label>
-          <input class="form-input" id="f-notes" type="text" placeholder="Any additional information..." autocomplete="off">
-        </div>
-        <button type="submit" class="form-submit-btn" id="submit-form-btn">Send to Moderators</button>
-        <div class="form-status" id="form-status"></div>
-      </form>
+      <div class="form-group">
+        <label>Level ID <span class="req">*</span></label>
+        <input type="text" id="sub_id" class="form-input" placeholder="e.g. 12345678" />
+      </div>
+      <div class="form-group">
+        <label>Creator <span class="req">*</span></label>
+        <input type="text" id="sub_creator" class="form-input" placeholder="Creator username" />
+      </div>
+      <div class="form-group">
+        <label>Video Link <span class="req">*</span></label>
+        <input type="url" id="sub_video" class="form-input" placeholder="https://youtube.com/watch?v=..." />
+      </div>
+      <div class="form-btns">
+        <button class="btn-modal-ghost" id="submitViaDiscord">📨 Discord</button>
+        <button class="btn-modal-primary" id="submitViaTelegram">✈ Telegram</button>
+      </div>
+      <div class="form-note" id="submitNote"></div>
     </div>
   </div>
-  <script src="js/admin.js" defer></script>
-  <script src="js/main.js" defer></script>
 
+  <div class="modal-overlay hidden" id="adminModal">
+    <div class="modal-box modal-box--admin">
+      <button class="modal-close" id="adminModalClose">✕</button>
+      <h2>🔐 Admin Panel</h2>
+
+      <div id="adminAuth">
+        <p class="modal-sub">Enter admin password.</p>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="adminPass" class="form-input" placeholder="••••••••" autocomplete="off" />
+        </div>
+        <button class="btn-modal-primary full" id="adminAuthBtn">Authenticate</button>
+        <div class="form-note" id="adminAuthNote"></div>
+      </div>
+
+      <div id="adminEditor" class="hidden">
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-tab="add">Add Level</button>
+          <button class="admin-tab" data-tab="edit">Edit / Delete</button>
+        </div>
+        <div id="adminTabAdd" class="admin-tab-content">
+          <div class="form-grid">
+            <div class="form-group"><label>Position</label><input type="number" id="a_position" class="form-input" placeholder="1" /></div>
+            <div class="form-group"><label>Level ID</label><input type="text" id="a_level_id" class="form-input" /></div>
+            <div class="form-group"><label>Name</label><input type="text" id="a_name" class="form-input" /></div>
+            <div class="form-group">
+              <label>Difficulty</label>
+              <select id="a_difficulty" class="form-input">
+                <option value="extreme_demon">Extreme Demon</option>
+                <option value="insane_demon">Insane Demon</option>
+                <option value="hard_demon">Hard Demon</option>
+                <option value="medium_demon">Medium Demon</option>
+                <option value="easy_demon">Easy Demon</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Creator</label><input type="text" id="a_creator" class="form-input" /></div>
+            <div class="form-group"><label>Verifier</label><input type="text" id="a_verifier" class="form-input" /></div>
+            <div class="form-group"><label>Publisher</label><input type="text" id="a_publisher" class="form-input" /></div>
+            <div class="form-group form-group--full"><label>YouTube URL</label><input type="url" id="a_video" class="form-input" /></div>
+          </div>
+          <button class="btn-modal-primary full" id="adminAddBtn">Add Level</button>
+          <div class="form-note" id="adminAddNote"></div>
+        </div>
+        <div id="adminTabEdit" class="admin-tab-content hidden">
+          <select id="adminSelectLevel" class="form-input" style="margin-bottom:1rem"><option value="">— Select a level —</option></select>
+          <div id="adminEditForm" class="hidden">
+            <div class="form-grid">
+              <div class="form-group"><label>Position</label><input type="number" id="e_position" class="form-input" /></div>
+              <div class="form-group"><label>Level ID</label><input type="text" id="e_level_id" class="form-input" /></div>
+              <div class="form-group"><label>Name</label><input type="text" id="e_name" class="form-input" /></div>
+              <div class="form-group">
+                <label>Difficulty</label>
+                <select id="e_difficulty" class="form-input">
+                  <option value="extreme_demon">Extreme Demon</option>
+                  <option value="insane_demon">Insane Demon</option>
+                  <option value="hard_demon">Hard Demon</option>
+                  <option value="medium_demon">Medium Demon</option>
+                  <option value="easy_demon">Easy Demon</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Creator</label><input type="text" id="e_creator" class="form-input" /></div>
+              <div class="form-group"><label>Verifier</label><input type="text" id="e_verifier" class="form-input" /></div>
+              <div class="form-group"><label>Publisher</label><input type="text" id="e_publisher" class="form-input" /></div>
+              <div class="form-group form-group--full"><label>YouTube URL</label><input type="url" id="e_video" class="form-input" /></div>
+            </div>
+            <div class="form-btns">
+              <button class="btn-modal-danger" id="adminDeleteBtn">🗑 Delete</button>
+              <button class="btn-modal-primary" id="adminUpdateBtn">✓ Save Changes</button>
+            </div>
+          </div>
+          <div class="form-note" id="adminEditNote"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
