@@ -8,18 +8,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-
 </head>
 <body>
-
   <header class="site-header">
     <div class="header-inner">
-
       <div class="header-left">
         <span class="logo">DLL<span class="logo-accent">
         <span class="version">v1.0.0</span>
       </div>
-
       <nav class="header-nav">
         <a href="#" class="nav-link active">List</a>
         <a href="https://denigdpswww.ps.fhgdps.com/dashboard" target="_blank" rel="noopener" class="nav-link">Dashboard</a>
@@ -32,16 +28,12 @@
           <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
         </button>
       </nav>
-
       <div class="header-actions">
         <button id="submitBtn" class="btn-submit">Submit Level</button>
       </div>
-
     </div>
   </header>
-
   <div class="layout">
-
     <aside class="sidebar-left">
       <div class="sidebar-search-wrap">
         <input type="text" id="searchInput" class="sidebar-search" placeholder="🔎 Search by level name..." />
@@ -58,56 +50,42 @@
         <div class="sk-item" style="--d:8"></div>
       </div>
     </aside>
-
     <main class="main-content" id="mainContent">
-
       <div class="main-placeholder" id="mainPlaceholder">
         <div class="placeholder-icon">
           <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
         <p>Select a level from the list</p>
       </div>
-
       <div class="main-error hidden" id="mainError">
         <div class="placeholder-icon">⚠</div>
         <p id="errorMsg">Failed to load. Check Supabase config in app.js</p>
       </div>
-
       <div class="level-detail hidden" id="levelDetail">
-
         <div class="detail-header">
-          <img id="detailDiffImg" src="" alt="" class="detail-diff-img"
-               onerror="this.style.visibility='hidden'" />
+          <img id="detailDiffImg" src="" alt="" class="detail-diff-img" onerror="this.style.visibility='hidden'" />
           <h1 id="detailName" class="detail-name">—</h1>
         </div>
-
         <div class="detail-meta">
           <div class="meta-row"><span class="meta-key">CREATOR</span><span class="meta-val" id="detailCreator">—</span></div>
           <div class="meta-row"><span class="meta-key">VERIFIER</span><span class="meta-val" id="detailVerifier">—</span></div>
           <div class="meta-row"><span class="meta-key">PUBLISHER</span><span class="meta-val" id="detailPublisher">—</span></div>
           <div class="meta-row"><span class="meta-key">LEVEL ID</span><span class="meta-val" id="levelIdValue">—</span></div>
-      </div>
-
+        </div>
+        <div id="detailTags" class="level-tags"></div>
         <div class="video-tabs">
           <button class="vtab active" data-tab="verification">Showcase</button>
           <button class="vtab" data-tab="showcase" id="showcaseTabBtn" style="display:none">Showcase</button>
         </div>
-
         <div class="video-wrapper">
-          <iframe id="detailVideo" src="" title="Level showcase"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen loading="lazy"></iframe>
+          <iframe id="detailVideo" src="" title="Level showcase" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
         </div>
-
       </div>
     </main>
-
     <aside class="sidebar-right">
-
       <div class="right-card" id="levelInfoCard" style="display:none">
         <p id="levelInfoText"></p>
       </div>
-
       <div class="right-section">
         <h3 class="right-title">List Editors</h3>
         <ul class="editors-list">
@@ -118,20 +96,16 @@
           </li>
         </ul>
       </div>
-
       <div class="right-section">
         <h3 class="right-title">Stats</h3>
         <div class="stat-row"><span class="stat-label">Total levels</span><span class="stat-val" id="statTotal">—</span></div>
         <div class="stat-row"><span class="stat-label">Unique verifiers</span><span class="stat-val" id="statVerif">—</span></div>
       </div>
-
       <div class="right-section">
         <a href="#" id="submissionReq" class="right-link">Submission Requirements</a>
       </div>
-
     </aside>
   </div>
-
   <div class="modal-overlay hidden" id="submitModal">
     <div class="modal-box">
       <button class="modal-close" id="submitModalClose">✕</button>
@@ -160,12 +134,10 @@
       <div class="form-note" id="submitNote"></div>
     </div>
   </div>
-
   <div class="modal-overlay hidden" id="adminModal">
     <div class="modal-box modal-box--admin">
       <button class="modal-close" id="adminModalClose">✕</button>
       <h2>🔐 Admin Panel</h2>
-
       <div id="adminAuth">
         <p class="modal-sub">Enter admin password.</p>
         <div class="form-group">
@@ -175,7 +147,6 @@
         <button class="btn-modal-primary full" id="adminAuthBtn">Authenticate</button>
         <div class="form-note" id="adminAuthNote"></div>
       </div>
-
       <div id="adminEditor" class="hidden">
         <div class="admin-tabs">
           <button class="admin-tab active" data-tab="add">Add Level</button>
@@ -234,13 +205,8 @@
           <div class="form-note" id="adminEditNote"></div>
         </div>
       </div>
-
     </div>
   </div>
-  <script src="js/admin.js" defer></script>
-  <script src="js/main.js" defer></script>
-
   <script src="app.js"></script>
-  <script src="admin.js"></script>
 </body>
 </html>

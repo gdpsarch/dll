@@ -2,7 +2,6 @@
   --blue:        #007bff;
   --blue-hover:  #1a8dff;
   --blue-dark:   #0062cc;
-
   --bg:          #1a1a2e;
   --bg-sidebar:  #16213e;
   --bg-main:     #0f3460;
@@ -293,7 +292,6 @@ input, select { font-family: inherit; }
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-
 .detail-name {
   font-family: 'Nunito', sans-serif;
   font-size: clamp(1.6rem, 3vw, 2.4rem);
@@ -308,6 +306,21 @@ input, select { font-family: inherit; }
   color: var(--text-muted); min-width: 80px;
 }
 .meta-val { font-weight: 700; color: var(--text); }
+
+.level-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1.4rem;
+  align-items: center;
+}
+
+.tag-icon {
+  height: 24px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
 
 .video-tabs {
   display: flex; gap: 0; margin-bottom: 0;

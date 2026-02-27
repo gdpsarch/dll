@@ -58,6 +58,7 @@ const detailPublisher= document.getElementById("detailPublisher");
 const detailVideo    = document.getElementById("detailVideo");
 const showcaseTabBtn = document.getElementById("showcaseTabBtn");
 const detailID       = document.getElementById("levelIdValue");
+const detailTags     = document.getElementById("detailTags");
 
 function renderSidebar() {
   const q = searchQuery.toLowerCase();
@@ -100,6 +101,20 @@ function selectLevel(id) {
   detailVerifier.textContent = level.verifier;
   detailPublisher.textContent= level.publisher;
   detailID.textContent = level.level_id;
+
+  detailTags.innerHTML = "";
+  if (level.tags) {
+    const tagsArray = level.tags.split(",").map(t => t.trim());
+    tagsArray.forEach(tag => {
+      if (tag === "") return;
+      const img = document.createElement("img");
+      img.src = `assets/tags/${tag}.png`;
+      img.className = "tag-icon";
+      img.alt = tag;
+      img.onerror = () => img.remove();
+      detailTags.appendChild(img);
+    });
+  }
 
   const embedUrl = gdEmbed(level.video_url);
   detailVideo.src = embedUrl || "";
@@ -217,18 +232,13 @@ window._d3n1 = {
 async function init() {
   try {
     allLevels = await fetchLevels();
-
     statTotal.textContent = allLevels.length;
     statVerif.textContent = Math.max(new Set(allLevels.map(l => l.verifier)).size - 1);
-
     renderSidebar();
-
     mainPlaceholder.querySelector("p").textContent = "Select a level from the list";
     mainPlaceholder.querySelector(".placeholder-icon").innerHTML =
       `<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="8.01" y2="15"/><line x1="12" y1="15" x2="12.01" y2="15"/><line x1="16" y1="15" x2="16.01" y2="15"/></svg>`;
-
     if (allLevels.length) selectLevel(allLevels[0].id);
-
   } catch (err) {
     mainPlaceholder.classList.add("hidden");
     mainError.classList.remove("hidden");
@@ -237,5 +247,4 @@ async function init() {
     console.error("[d3n1GDPS]", err);
   }
 }
-
 init();
