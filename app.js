@@ -25,14 +25,16 @@ async function fetchLevels() {
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 }
-function ytEmbed(url) {
+function gdEmbed(url) {
   if (!url) return null;
-  let vid = null;
-  for (const p of [/[?&]v=([^&#]+)/, /youtu\.be\/([^?&#]+)/, /shorts\/([^?&#]+)/]) {
-    const m = url.match(p); if (m) { vid = m[1]; break; }
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+  if (m) {
+    const vid = m[1];
+    return `https://drive.google.com/file/d/${vid}/preview`;
   }
-  return vid ? `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1` : null;
+  return null;
 }
+
 function setNote(el, type, text) {
   if (typeof el === "string") el = document.getElementById(el);
   el.className = `form-note ${type}`;
@@ -99,7 +101,7 @@ function selectLevel(id) {
   detailPublisher.textContent= level.publisher;
   detailID.textContent = level.level_id;
 
-  const embedUrl = ytEmbed(level.video_url);
+  const embedUrl = gdEmbed(level.video_url);
   detailVideo.src = embedUrl || "";
   showcaseTabBtn.style.display = "none";
 
@@ -118,7 +120,7 @@ document.querySelectorAll(".vtab").forEach(btn => {
     document.querySelectorAll(".vtab").forEach(t => t.classList.remove("active"));
     btn.classList.add("active");
     const level = allLevels.find(l => l.id === activeLevelId);
-    if (level) detailVideo.src = ytEmbed(level.video_url) || "";
+    if (level) detailVideo.src = gdEmbed(level.video_url) || "";
   });
 });
 
