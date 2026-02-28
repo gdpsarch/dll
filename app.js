@@ -1,9 +1,9 @@
-const SUPABASE_URL      = process.env.SupabaseURL;
-const SUPABASE_ANON_KEY = process.env.SupabaseAnonKey;
+const SUPABASE_URL      = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-const DISCORD_WEBHOOK_URL = process.env.DiscordWebhookURL;
-const TELEGRAM_BOT_TOKEN  = process.env.TelegramBotToken;
-const TELEGRAM_CHAT_ID    = process.env.TelegramChatID;
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const TELEGRAM_BOT_TOKEN  = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID    = process.env.TELEGRAM_CHAT_ID;
 
 const SUBMISSION_COOLDOWN = 60 * 60 * 1000;
 
