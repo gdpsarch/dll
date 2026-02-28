@@ -5,6 +5,8 @@ const DISCORD_WEBHOOK_URL = "";
 const TELEGRAM_BOT_TOKEN  = "8712706690:AAGauu7o62qSg3ivMwV8X6744txmg9Gum9Y";
 const TELEGRAM_CHAT_ID    = "7497410701";
 
+const SUBMISSION_COOLDOWN = 60 * 60 * 1000;
+
 let allLevels      = [];
 let activeLevelId  = null;
 let searchQuery    = "";
@@ -38,6 +40,7 @@ function sbHeaders() {
     "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
   };
 }
+
 async function fetchLevels() {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/levels?select=*&order=position.asc`, { headers: sbHeaders() });
   if (!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
@@ -47,6 +50,7 @@ async function fetchLevels() {
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 }
+
 function gdEmbed(url) {
   if (!url) return null;
   const m = url.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
@@ -235,6 +239,7 @@ searchInput.addEventListener("input", e => {
   const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   document.documentElement.setAttribute("data-theme", saved || (sysDark ? "dark" : "light"));
 })();
+
 document.getElementById("themeToggle").addEventListener("click", () => {
   const curr = document.documentElement.getAttribute("data-theme");
   const next = curr === "dark" ? "light" : "dark";
@@ -247,27 +252,53 @@ document.getElementById("submitBtn").addEventListener("click", () => submitModal
 document.getElementById("submitModalClose").addEventListener("click", () => submitModal.classList.add("hidden"));
 submitModal.addEventListener("click", e => { if (e.target === submitModal) submitModal.classList.add("hidden"); });
 
+async function getClientIp() {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip;
+  } catch (e) {
+    return "unknown_ip";
+  }
+}
+
+async function checkCooldown() {
+  const ip = await getClientIp();
+  const lastSub = localStorage.getItem(`last_sub_${ip}`);
+  const now = Date.now();
+
+  if (lastSub && (now - parseInt(lastSub)) < SUBMISSION_COOLDOWN) {
+    const remaining = Math.ceil((SUBMISSION_COOLDOWN - (now - parseInt(lastSub))) / 60000);
+    setNote("submitNote", "error", `Cooldown active. Please wait ${remaining} minutes.`);
+    return null;
+  }
+  return ip;
+}
+
+function updateCooldown(ip) {
+  localStorage.setItem(`last_sub_${ip}`, Date.now().toString());
+}
+
 function collectSubmission() {
   const name    = document.getElementById("sub_name").value.trim();
   const levelId = document.getElementById("sub_id").value.trim();
   const creator = document.getElementById("sub_creator").value.trim();
-  const video   = document.getElementById("sub_video").value.trim();
   const note    = document.getElementById("submitNote");
 
-  if (!name || !levelId || !creator || !video) {
+  if (!name || !levelId || !creator) {
     setNote(note, "error", "Please fill in all fields."); return null;
   }
-  try { new URL(video); } catch { setNote(note, "error", "Enter a valid video URL."); return null; }
-  if (!video.includes("youtube") && !video.includes("youtu.be")) {
-    setNote(note, "error", "Only YouTube links are accepted."); return null;
-  }
-  return { name, level_id: levelId, creator, video_url: video };
+  return { name, level_id: levelId, creator};
 }
 
 document.getElementById("submitViaDiscord").addEventListener("click", async () => {
+  const ip = await checkCooldown();
+  if (!ip) return;
+
   const data = collectSubmission();
   if (!data) return;
   if (!DISCORD_WEBHOOK_URL) { setNote("submitNote", "error", "Discord webhook not configured."); return; }
+  
   try {
     const r = await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -276,28 +307,56 @@ document.getElementById("submitViaDiscord").addEventListener("click", async () =
           { name: "Level Name", value: data.name, inline: true },
           { name: "Level ID", value: data.level_id, inline: true },
           { name: "Creator", value: data.creator, inline: true },
-          { name: "Video", value: data.video_url }
+          { name: "IP Info", value: ip }
         ], timestamp: new Date().toISOString() }] })
     });
-    if (r.ok || r.status === 204) setNote("submitNote", "success", "✓ Sent via Discord!");
+    if (r.ok || r.status === 204) {
+      setNote("submitNote", "success", "✓ Sent via Discord!");
+      updateCooldown(ip);
+    }
     else throw new Error(`Status ${r.status}`);
   } catch(e) { setNote("submitNote", "error", `Discord error: ${e.message}`); }
 });
 
 document.getElementById("submitViaTelegram").addEventListener("click", async () => {
+  const ip = await checkCooldown();
+  if (!ip) return;
+
   const data = collectSubmission();
   if (!data) return;
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) { setNote("submitNote", "error", "Telegram not configured."); return; }
+  
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) { 
+    setNote("submitNote", "error", "Telegram not configured."); 
+    return; 
+  }
+  
   try {
-    const text = `📥 *New Level Submission*\n*Name:* ${data.name}\n*ID:* ${data.level_id}\n*Creator:* ${data.creator}\n*Video:* ${data.video_url}`;
+    const text = `📥 <b>New Level Submission</b>\n` +
+                 `<b>Name:</b> ${data.name}\n` +
+                 `<b>ID:</b> ${data.level_id}\n` +
+                 `<b>Creator:</b> ${data.creator}\n` +
+                 `<b>IP:</b> <tg-spoiler>${ip}</tg-spoiler>`;
+
     const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "Markdown" })
+      method: "POST", 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        chat_id: TELEGRAM_CHAT_ID, 
+        text: text, 
+        parse_mode: "HTML"
+      })
     });
+
     const j = await r.json();
-    if (j.ok) setNote("submitNote", "success", "✓ Sent via Telegram!");
-    else throw new Error(j.description);
-  } catch(e) { setNote("submitNote", "error", `Telegram error: ${e.message}`); }
+    if (j.ok) {
+      setNote("submitNote", "success", "✓ Sent via Telegram!");
+      updateCooldown(ip);
+    } else {
+      throw new Error(j.description);
+    }
+  } catch(e) { 
+    setNote("submitNote", "error", `Telegram error: ${e.message}`); 
+  }
 });
 
 window._d3n1 = {
@@ -333,4 +392,5 @@ async function init() {
     console.error("[d3n1GDPS]", err);
   }
 }
+
 init();
