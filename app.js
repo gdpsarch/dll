@@ -8,6 +8,7 @@ const TELEGRAM_CHAT_ID    = "7497410701";
 const SUBMISSION_COOLDOWN = 60 * 60 * 1000;
 
 let allLevels      = [];
+let allRecords     = [];
 let activeLevelId  = null;
 let searchQuery    = "";
 
@@ -45,6 +46,16 @@ async function fetchLevels() {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/levels?select=*&order=position.asc`, { headers: sbHeaders() });
   if (!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
   return r.json();
+}
+
+async function fetchRecords() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/records?select=*&order=date.asc`, { headers: sbHeaders() });
+    if (!r.ok) return [];
+    return r.json();
+  } catch (e) {
+    return [];
+  }
 }
 
 function esc(s) {
@@ -90,6 +101,11 @@ const detailLength   = document.getElementById("detailLength");
 const detailObjects  = document.getElementById("detailObjects");
 const detailObjBar   = document.getElementById("detailObjBar");
 const detailTags     = document.getElementById("detailTags");
+
+const videoWrapper   = document.getElementById("videoWrapper");
+const recordsWrapper = document.getElementById("recordsWrapper");
+const recordsList    = document.getElementById("recordsList");
+const noRecordsMsg   = document.getElementById("noRecordsMsg");
 
 function renderSidebar() {
   const q = searchQuery.toLowerCase();
@@ -195,8 +211,24 @@ function selectLevel(id) {
   detailVideo.src = embedUrl || "";
   showcaseTabBtn.style.display = "none";
 
+  const lvlRecords = allRecords.filter(r => r.row_id === id);
+  recordsList.innerHTML = "";
+  if (lvlRecords.length > 0) {
+    noRecordsMsg.classList.add("hidden");
+    recordsList.innerHTML = lvlRecords.map(r => `
+      <tr>
+        <td>${esc(r.player)}</td>
+        <td>${esc(r.date || "Unknown")}</td>
+      </tr>
+    `).join("");
+  } else {
+    noRecordsMsg.classList.remove("hidden");
+  }
+
   document.querySelectorAll(".vtab").forEach(t => t.classList.remove("active"));
   document.querySelector(".vtab[data-tab='verification']").classList.add("active");
+  videoWrapper.classList.remove("hidden");
+  recordsWrapper.classList.add("hidden");
 
   mainPlaceholder.classList.add("hidden");
   mainError.classList.add("hidden");
@@ -224,8 +256,17 @@ document.querySelectorAll(".vtab").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".vtab").forEach(t => t.classList.remove("active"));
     btn.classList.add("active");
-    const level = allLevels.find(l => l.id === activeLevelId);
-    if (level) detailVideo.src = gdEmbed(level.video_url) || "";
+    
+    if (btn.dataset.tab === "verification" || btn.dataset.tab === "showcase") {
+      videoWrapper.classList.remove("hidden");
+      recordsWrapper.classList.add("hidden");
+      const level = allLevels.find(l => l.id === activeLevelId);
+      if (level) detailVideo.src = gdEmbed(level.video_url) || "";
+    } else if (btn.dataset.tab === "records") {
+      videoWrapper.classList.add("hidden");
+      recordsWrapper.classList.remove("hidden");
+      detailVideo.src = "";
+    }
   });
 });
 
@@ -252,6 +293,19 @@ document.getElementById("submitBtn").addEventListener("click", () => submitModal
 document.getElementById("submitModalClose").addEventListener("click", () => submitModal.classList.add("hidden"));
 submitModal.addEventListener("click", e => { if (e.target === submitModal) submitModal.classList.add("hidden"); });
 
+const submitRecordModal = document.getElementById("submitRecordModal");
+document.getElementById("submitRecordBtn").addEventListener("click", () => {
+  if (activeLevelId) {
+    const level = allLevels.find(l => l.id === activeLevelId);
+    if (level) {
+      document.getElementById("rec_level").value = `${level.name} (${level.level_id})`;
+    }
+  }
+  submitRecordModal.classList.remove("hidden");
+});
+document.getElementById("submitRecordModalClose").addEventListener("click", () => submitRecordModal.classList.add("hidden"));
+submitRecordModal.addEventListener("click", e => { if (e.target === submitRecordModal) submitRecordModal.classList.add("hidden"); });
+
 async function getClientIp() {
   try {
     const response = await fetch('https://api.ipify.org?format=json');
@@ -262,14 +316,14 @@ async function getClientIp() {
   }
 }
 
-async function checkCooldown() {
+async function checkCooldown(noteId) {
   const ip = await getClientIp();
   const lastSub = localStorage.getItem(`last_sub_${ip}`);
   const now = Date.now();
 
   if (lastSub && (now - parseInt(lastSub)) < SUBMISSION_COOLDOWN) {
     const remaining = Math.ceil((SUBMISSION_COOLDOWN - (now - parseInt(lastSub))) / 60000);
-    setNote("submitNote", "error", `Cooldown active. Please wait ${remaining} minutes.`);
+    setNote(noteId, "error", `Cooldown active. Please wait ${remaining} minutes.`);
     return null;
   }
   return ip;
@@ -291,8 +345,20 @@ function collectSubmission() {
   return { name, level_id: levelId, creator};
 }
 
+function collectRecordSubmission() {
+  const player = document.getElementById("rec_player").value.trim();
+  const level  = document.getElementById("rec_level").value.trim();
+  const video  = document.getElementById("rec_video").value.trim();
+  const note   = document.getElementById("submitRecNote");
+
+  if (!player || !level || !video) {
+    setNote(note, "error", "Please fill in all fields."); return null;
+  }
+  return { player, level, video };
+}
+
 document.getElementById("submitViaDiscord").addEventListener("click", async () => {
-  const ip = await checkCooldown();
+  const ip = await checkCooldown("submitNote");
   if (!ip) return;
 
   const data = collectSubmission();
@@ -319,7 +385,7 @@ document.getElementById("submitViaDiscord").addEventListener("click", async () =
 });
 
 document.getElementById("submitViaTelegram").addEventListener("click", async () => {
-  const ip = await checkCooldown();
+  const ip = await checkCooldown("submitNote");
   if (!ip) return;
 
   const data = collectSubmission();
@@ -359,6 +425,69 @@ document.getElementById("submitViaTelegram").addEventListener("click", async () 
   }
 });
 
+document.getElementById("submitRecViaDiscord").addEventListener("click", async () => {
+  const ip = await checkCooldown("submitRecNote");
+  if (!ip) return;
+
+  const data = collectRecordSubmission();
+  if (!data) return;
+  if (!DISCORD_WEBHOOK_URL) { setNote("submitRecNote", "error", "Discord webhook not configured."); return; }
+  
+  try {
+    const r = await fetch(DISCORD_WEBHOOK_URL, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ embeds: [{ title: "🏆 New Record Submission", color: 0x00d68f,
+        fields: [
+          { name: "Player", value: data.player, inline: true },
+          { name: "Level", value: data.level, inline: true },
+          { name: "Video URL", value: data.video, inline: false },
+          { name: "IP Info", value: ip, inline: false }
+        ], timestamp: new Date().toISOString() }] })
+    });
+    if (r.ok || r.status === 204) {
+      setNote("submitRecNote", "success", "✓ Sent via Discord!");
+      updateCooldown(ip);
+    }
+    else throw new Error(`Status ${r.status}`);
+  } catch(e) { setNote("submitRecNote", "error", `Discord error: ${e.message}`); }
+});
+
+document.getElementById("submitRecViaTelegram").addEventListener("click", async () => {
+  const ip = await checkCooldown("submitRecNote");
+  if (!ip) return;
+
+  const data = collectRecordSubmission();
+  if (!data) return;
+  
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) { 
+    setNote("submitRecNote", "error", "Telegram not configured."); 
+    return; 
+  }
+  
+  try {
+    const text = `🏆 <b>New Record Submission</b>\n` +
+                 `<b>Player:</b> ${esc(data.player)}\n` +
+                 `<b>Level:</b> ${esc(data.level)}\n` +
+                 `<b>Video:</b> ${esc(data.video)}\n` +
+                 `<b>IP:</b> <tg-spoiler>${ip}</tg-spoiler>`;
+
+    const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: "HTML" })
+    });
+
+    const j = await r.json();
+    if (j.ok) {
+      setNote("submitRecNote", "success", "✓ Sent via Telegram!");
+      updateCooldown(ip);
+    } else {
+      throw new Error(j.description);
+    }
+  } catch(e) { 
+    setNote("submitRecNote", "error", `Telegram error: ${e.message}`); 
+  }
+});
+
 window._d3n1 = {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
@@ -366,7 +495,12 @@ window._d3n1 = {
   fetchLevels,
   setNote,
   reload: async () => {
-    allLevels = await fetchLevels();
+    const [levelsRes, recordsRes] = await Promise.all([
+      fetchLevels(),
+      fetchRecords()
+    ]);
+    allLevels = levelsRes;
+    allRecords = recordsRes;
     statTotal.textContent = allLevels.length;
     statVerif.textContent = new Set(allLevels.map(l => l.verifier)).size;
     renderSidebar();
@@ -376,13 +510,21 @@ window._d3n1 = {
 
 async function init() {
   try {
-    allLevels = await fetchLevels();
+    const [levelsRes, recordsRes] = await Promise.all([
+      fetchLevels(),
+      fetchRecords()
+    ]);
+    allLevels = levelsRes;
+    allRecords = recordsRes;
+
     statTotal.textContent = allLevels.length;
     statVerif.textContent = Math.max(new Set(allLevels.map(l => l.verifier)).size - 1, 0);
     renderSidebar();
+    
     mainPlaceholder.querySelector("p").textContent = "Select a level from the list";
     mainPlaceholder.querySelector(".placeholder-icon").innerHTML =
       `<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="8.01" y2="15"/><line x1="12" y1="15" x2="12.01" y2="15"/><line x1="16" y1="15" x2="16.01" y2="15"/></svg>`;
+    
     if (allLevels.length) selectLevel(allLevels[0].id);
   } catch (err) {
     mainPlaceholder.classList.add("hidden");
