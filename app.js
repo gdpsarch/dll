@@ -1,9 +1,9 @@
-const SUPABASE_URL      = "https://kyoyfvgdeabkylhggpto.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_DP1Ut2zBTJawMv-m6E-vnQ_MTn5u_ig";
+const SUPABASE_URL      = process.env.SupabaseURL;
+const SUPABASE_ANON_KEY = process.env.SupabaseAnonKey;
 
-const DISCORD_WEBHOOK_URL = "";
-const TELEGRAM_BOT_TOKEN  = "8712706690:AAGauu7o62qSg3ivMwV8X6744txmg9Gum9Y";
-const TELEGRAM_CHAT_ID    = "7497410701";
+const DISCORD_WEBHOOK_URL = process.env.DiscordWebhookURL;
+const TELEGRAM_BOT_TOKEN  = process.env.TelegramBotToken;
+const TELEGRAM_CHAT_ID    = process.env.TelegramChatID;
 
 const SUBMISSION_COOLDOWN = 60 * 60 * 1000;
 
