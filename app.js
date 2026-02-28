@@ -3,11 +3,33 @@ const SUPABASE_ANON_KEY = "sb_publishable_DP1Ut2zBTJawMv-m6E-vnQ_MTn5u_ig";
 
 const DISCORD_WEBHOOK_URL = "";
 const TELEGRAM_BOT_TOKEN  = "8712706690:AAGauu7o62qSg3ivMwV8X6744txmg9Gum9Y";
-const TELEGRAM_CHAT_ID    = "";
+const TELEGRAM_CHAT_ID    = "7497410701";
 
 let allLevels      = [];
 let activeLevelId  = null;
 let searchQuery    = "";
+
+const tagData = {
+  "collab": { desc: "Created by multiple creators working together.", color: "#00ffa3" },
+  "dual": { desc: "Focuses on dual-mode gameplay and coordination.", color: "#ff0066" },
+  "fast": { desc: "High-speed gameplay with rapid movements.", color: "#ffcc00" },
+  "flash": { desc: "Contains flashing lights or strobe effects.", color: "#ffff00" },
+  "flow": { desc: "Fast-paced gameplay focused on smooth transitions.", color: "#ffffff" },
+  "layout": { desc: "Level featuring unpolished or minimal decoration.", color: "#4d4d4d" },
+  "long": { desc: "A level with a longer than average duration.", color: "#00ff00" },
+  "medium": { desc: "Medium overall difficulty and length.", color: "#a6a6a6" },
+  "memory": { desc: "Requires memorization of hidden or tricky paths.", color: "#6633ff" },
+  "nerfed": { desc: "A version of a level that has been made easier.", color: "#00cc66" },
+  "silent": { desc: "Extremely difficult, often considered impossible.", color: "#1a0033" },
+  "spammy": { desc: "Requires extremely fast clicking or jitter clicking.", color: "#ff00ff" },
+  "special": { desc: "Features unique mechanics or special events.", color: "#ffffff" },
+  "sync": { desc: "Gameplay is strictly synchronized to the music.", color: "#00ccff" },
+  "timing": { desc: "Requires highly precise and timed inputs.", color: "#ff4d4d" },
+  "unique": { desc: "Features original or never-before-seen gameplay.", color: "#00ffd4" },
+  "wave": { desc: "Gameplay heavily focused on the Wave mode.", color: "#0099ff" },
+  "xl": { desc: "Extra long level, typically over 2 minutes.", color: "#ff9900" },
+  "xl+": { desc: "Extremely long level (Marathon length).", color: "#ff3300" }
+};
 
 function sbHeaders() {
   return {
@@ -52,18 +74,27 @@ const statVerif      = document.getElementById("statVerif");
 
 const detailDiffImg  = document.getElementById("detailDiffImg");
 const detailName     = document.getElementById("detailName");
+const detailVerified = document.getElementById("detailVerified");
 const detailCreator  = document.getElementById("detailCreator");
 const detailVerifier = document.getElementById("detailVerifier");
 const detailPublisher= document.getElementById("detailPublisher");
 const detailVideo    = document.getElementById("detailVideo");
 const showcaseTabBtn = document.getElementById("showcaseTabBtn");
 const detailID       = document.getElementById("levelIdValue");
+const detailPoints   = document.getElementById("detailPoints");
+const detailLength   = document.getElementById("detailLength");
+const detailObjects  = document.getElementById("detailObjects");
+const detailObjBar   = document.getElementById("detailObjBar");
 const detailTags     = document.getElementById("detailTags");
 
 function renderSidebar() {
   const q = searchQuery.toLowerCase();
   const filtered = q
-    ? allLevels.filter(l => l.name.toLowerCase().includes(q) || l.creator.toLowerCase().includes(q))
+    ? allLevels.filter(l => 
+        (l.name && l.name.toLowerCase().includes(q)) || 
+        (l.creator && l.creator.toLowerCase().includes(q)) ||
+        (l.tags && l.tags.toLowerCase().includes(q))
+      )
     : allLevels;
 
   if (!filtered.length) {
@@ -97,22 +128,62 @@ function selectLevel(id) {
   detailDiffImg.style.visibility = "visible";
   detailName.textContent = level.name;
 
-  detailCreator.textContent  = level.creator;
-  detailVerifier.textContent = level.verifier;
-  detailPublisher.textContent= level.publisher;
-  detailID.textContent = level.level_id;
+  if (level.is_verified) {
+    detailVerified.classList.remove("hidden");
+  } else {
+    detailVerified.classList.add("hidden");
+  }
+
+  detailCreator.textContent  = level.creator || "Unknown";
+  detailVerifier.textContent = level.verifier || "None";
+  detailPublisher.textContent= level.publisher || "None";
+  detailID.textContent = level.level_id || "N/A";
+  
+  detailPoints.textContent = level.points || "0";
+  detailLength.textContent = level.length || "Unknown";
+
+  const objCount = level.objects || 0;
+  detailObjects.textContent = objCount.toLocaleString();
+  
+  const maxObj = 100000;
+  let pct = Math.min((objCount / maxObj) * 100, 100);
+  detailObjBar.style.width = pct + "%";
+  detailObjBar.className = "obj-bar-fill";
+  if (objCount < 40000) detailObjBar.classList.add("obj-low");
+  else if (objCount < 80000) detailObjBar.classList.add("obj-med");
+  else detailObjBar.classList.add("obj-high");
 
   detailTags.innerHTML = "";
   if (level.tags) {
-    const tagsArray = level.tags.split(",").map(t => t.trim());
+    const tagsArray = level.tags.split(",").map(t => t.trim()).filter(Boolean);
     tagsArray.forEach(tag => {
-      if (tag === "") return;
+      const tagInfo = tagData[tag] || { desc: "No description provided.", color: "#ffffff" };
+      const wrapper = document.createElement("div");
+      wrapper.className = "tag-wrapper";
+      wrapper.style.setProperty("--tag-color", tagInfo.color);
+      
       const img = document.createElement("img");
       img.src = `assets/tags/${tag}.png`;
       img.className = "tag-icon";
       img.alt = tag;
-      img.onerror = () => img.remove();
-      detailTags.appendChild(img);
+      img.onerror = () => wrapper.remove();
+      
+      const tooltip = document.createElement("div");
+      tooltip.className = "tag-tooltip";
+      const descText = document.createElement("span");
+      descText.textContent = tagInfo.desc;
+      tooltip.appendChild(descText);
+      
+      if (tag.toLowerCase() === "sync") {
+        const catImg = document.createElement("img");
+        catImg.src = "assets/easteregg/soggycat.webp";
+        catImg.className = "soggy-cat";
+        tooltip.appendChild(catImg);
+      }
+      
+      wrapper.appendChild(img);
+      wrapper.appendChild(tooltip);
+      detailTags.appendChild(wrapper);
     });
   }
 
@@ -129,6 +200,21 @@ function selectLevel(id) {
 
   document.querySelector(".main-content").scrollTop = 0;
 }
+
+detailID.addEventListener("click", () => {
+  const idText = detailID.textContent;
+  if (idText === "N/A" || idText === "—") return;
+  navigator.clipboard.writeText(idText);
+  
+  const origText = detailID.textContent;
+  detailID.textContent = "Copied!";
+  detailID.classList.add("copied");
+  
+  setTimeout(() => {
+    detailID.textContent = origText;
+    detailID.classList.remove("copied");
+  }, 1500);
+});
 
 document.querySelectorAll(".vtab").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -233,7 +319,7 @@ async function init() {
   try {
     allLevels = await fetchLevels();
     statTotal.textContent = allLevels.length;
-    statVerif.textContent = Math.max(new Set(allLevels.map(l => l.verifier)).size - 1);
+    statVerif.textContent = Math.max(new Set(allLevels.map(l => l.verifier)).size - 1, 0);
     renderSidebar();
     mainPlaceholder.querySelector("p").textContent = "Select a level from the list";
     mainPlaceholder.querySelector(".placeholder-icon").innerHTML =
@@ -243,7 +329,7 @@ async function init() {
     mainPlaceholder.classList.add("hidden");
     mainError.classList.remove("hidden");
     sidebarList.innerHTML = "";
-    errorMsg.textContent = `${err.message} — Check SUPABASE_URL and SUPABASE_ANON_KEY in js/app.js`;
+    errorMsg.textContent = `${err.message} — Check SUPABASE_URL and SUPABASE_ANON_KEY in app.js`;
     console.error("[d3n1GDPS]", err);
   }
 }

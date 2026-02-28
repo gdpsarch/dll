@@ -13,8 +13,8 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="header-left">
-        <span class="logo">DLL<span class="logo-accent">
-        <span class="version">v1.1.1</span>
+        <span class="logo">DLL<span class="logo-accent"></span></span>
+        <span class="version">v1.2.1</span>
       </div>
       <nav class="header-nav">
         <a href="#" class="nav-link active">List</a>
@@ -36,7 +36,7 @@
   <div class="layout">
     <aside class="sidebar-left">
       <div class="sidebar-search-wrap">
-        <input type="text" id="searchInput" class="sidebar-search" placeholder="🔎 Search by level name..." />
+        <input type="text" id="searchInput" class="sidebar-search" placeholder="🔎 Search by name, creator or tag..." />
       </div>
       <div class="sidebar-list" id="sidebarList">
         <div class="sk-item" style="--d:0"></div>
@@ -64,13 +64,30 @@
       <div class="level-detail hidden" id="levelDetail">
         <div class="detail-header">
           <img id="detailDiffImg" src="" alt="" class="detail-diff-img" onerror="this.style.visibility='hidden'" />
-          <h1 id="detailName" class="detail-name">—</h1>
+          <div class="detail-name-wrap">
+            <h1 id="detailName" class="detail-name">—</h1>
+            <span id="detailVerified" class="verified-badge hidden">Verified</span>
+          </div>
         </div>
         <div class="detail-meta">
           <div class="meta-row"><span class="meta-key">CREATOR</span><span class="meta-val" id="detailCreator">—</span></div>
           <div class="meta-row"><span class="meta-key">VERIFIER</span><span class="meta-val" id="detailVerifier">—</span></div>
           <div class="meta-row"><span class="meta-key">PUBLISHER</span><span class="meta-val" id="detailPublisher">—</span></div>
-          <div class="meta-row"><span class="meta-key">LEVEL ID</span><span class="meta-val" id="levelIdValue">—</span></div>
+          <div class="meta-row">
+            <span class="meta-key">LEVEL ID</span>
+            <span class="meta-val id-interactive" id="levelIdValue" title="Click to copy">—</span>
+          </div>
+          <div class="meta-row"><span class="meta-key">POINTS</span><span class="meta-val" id="detailPoints">—</span></div>
+          <div class="meta-row"><span class="meta-key">LENGTH</span><span class="meta-val" id="detailLength">—</span></div>
+          <div class="meta-row meta-row-objects">
+            <span class="meta-key">OBJECTS</span>
+            <div class="obj-wrapper">
+              <span class="meta-val" id="detailObjects">—</span>
+              <div class="obj-bar-bg">
+                <div class="obj-bar-fill" id="detailObjBar"></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div id="detailTags" class="level-tags"></div>
         <div class="video-tabs">
