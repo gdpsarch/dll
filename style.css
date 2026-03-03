@@ -479,7 +479,6 @@ input, select { font-family: inherit; }
   font-size: .84rem; font-weight: 700; color: var(--text-muted);
   display: flex; align-items: center; gap: .4rem;
 }
-
 .role-icon { font-size: .8rem; }
 
 .stat-row {
