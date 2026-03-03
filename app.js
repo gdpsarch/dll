@@ -1,9 +1,9 @@
-const SUPABASE_URL      = CONFIG.SUPABASE_URL;
-const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+const SUPABASE_URL      = "https://kyoyfvgdeabkylhggpto.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_w3raQHwmbYrnakIOUHbmgQ_kfXgTqIQ"; // это для чтения а не управления, пояснение для чайников блять
 
-const DISCORD_WEBHOOK_URL = CONFIG.DISCORD_WEBHOOK_URL;
-const TELEGRAM_BOT_TOKEN  = CONFIG.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID    = CONFIG.TELEGRAM_CHAT_ID;
+const DISCORD_WEBHOOK_URL = "";
+const TELEGRAM_BOT_TOKEN  = "";
+const TELEGRAM_CHAT_ID    = "";
 
 const SUBMISSION_COOLDOWN = 60 * 60 * 1000;
 
