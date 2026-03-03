@@ -1,38 +1,263 @@
 'use strict';
 
-const WEBHOOK_URL = '8712706690:AAGauu7o62qSg3ivMwV8X6744txmg9Gum9Y';
-const ADMIN_HASH  = '587ae57a0296a35139faad7a4140e980e36763957cf5f85735fce54c2cd4ba88';
+const ADMIN_HASH = '1615bb6419bb051d63e6cb9894dd5f99912275516b670757c928916eef21b619';
 
-const DIFFICULTIES = [
-  'extreme_demon'
+const ALL_TAGS = [
+  'collab','dual','fast','flash','flow','layout','long','medium',
+  'memory','nerfed','silent','spammy','special','sync','timing',
+  'unique','wave','xl','xl+'
 ];
 
-window.sendToWebhook = async function(payload) {
-  if (!WEBHOOK_URL) { console.warn('[DLL] No webhook configured.'); return false; }
-  try {
-    const isTG = WEBHOOK_URL.includes('api.telegram.org');
-    if (isTG) {
-      const text = `*New Submission*\n*Name:* ${payload.name}\n*ID:* ${payload.levelId}\n*Creator:* ${payload.creator}\n*Video:* ${payload.videoLink}`;
-      const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text, parse_mode:'Markdown'}) });
-      return r.ok;
-    } else {
-      const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username:'d3n1GDPS Bot', embeds:[{ title:'New Level Submission', color:0x1a6fff, fields:[ {name:'Level Name',value:payload.name||'—',inline:true},{name:'Level ID',value:payload.levelId||'—',inline:true},{name:'Creator',value:payload.creator||'—',inline:true},{name:'Video',value:payload.videoLink||'—'}, ...(payload.notes?[{name:'Notes',value:payload.notes}]:[]) ], timestamp:new Date().toISOString() }] }) });
-      return r.status === 204 || r.ok;
-    }
-  } catch(e) { console.error('[DLL] Webhook error:', e); return false; }
-};
+let adminAuthed = false;
+let adminLevels = [];
+let editingId   = null;
+let formTags    = [];
+let dragSrcIdx  = null;
 
-async function sha256(msg) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+function getDb() {
+  if (!window._d3n1) throw new Error('app.js not loaded yet');
+  return { url: window._d3n1.SUPABASE_URL, h: window._d3n1.sbHeaders() };
 }
 
-let adminAuthed  = false;
-let adminLevels  = [];
-let editingIndex = null;
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-function escHtml(str) {
-  const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+async function dbRequest(path, method = 'GET', body = null) {
+  const { url, h } = getDb();
+  const headers = { ...h };
+  if (method === 'POST' || method === 'PATCH') headers['Prefer'] = 'return=representation';
+  const opts = { method, headers };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const r = await fetch(`${url}/rest/v1/${path}`, opts);
+  if (!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
+  if (method === 'DELETE') return null;
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+async function loadAdminLevels() {
+  adminLevels = await dbRequest('levels?select=*&order=position.asc');
+  renderAdminList();
+  updateAdminCount();
+}
+
+function buildPayload(f) {
+  const verifier = f.verifier.trim() || '???';
+  return {
+    position:        parseInt(f.position) || 1,
+    level_id:        f.level_id.trim(),
+    name:            f.name.trim(),
+    difficulty_icon: 'extreme_demon',
+    creator:         f.creator.trim(),
+    verifier,
+    publisher:       f.publisher.trim(),
+    video_url:       f.video_url.trim(),
+    tags:            f.tags,
+    points:          parseFloat(f.points) || 0,
+    length:          f.length.trim(),
+    objects:         parseInt(f.objects) || 0,
+    is_verified:     verifier !== '???'
+  };
+}
+
+async function adminCreateLevel(f) {
+  await dbRequest('levels', 'POST', buildPayload(f));
+  await loadAdminLevels();
+  if (window._d3n1?.reload) window._d3n1.reload();
+  showAdminSt('Level added ✓', 'ok');
+}
+
+async function adminUpdateLevel(id, f) {
+  await dbRequest(`levels?id=eq.${id}`, 'PATCH', buildPayload(f));
+  await loadAdminLevels();
+  if (window._d3n1?.reload) window._d3n1.reload();
+  showAdminSt('Saved ✓', 'ok');
+}
+
+async function adminDeleteLevel(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  await dbRequest(`levels?id=eq.${id}`, 'DELETE');
+  await loadAdminLevels();
+  if (window._d3n1?.reload) window._d3n1.reload();
+  showAdminSt('Deleted', 'ok');
+}
+
+async function persistPositions() {
+  const { url, h } = getDb();
+  const headers = { ...h, 'Prefer': 'resolution=merge-duplicates' };
+  const rows = adminLevels.map((l, i) => ({ id: l.id, position: i + 1 }));
+  await fetch(`${url}/rest/v1/levels`, {
+    method: 'POST', headers, body: JSON.stringify(rows)
+  });
+  adminLevels.forEach((l, i) => { l.position = i + 1; });
+  if (window._d3n1?.reload) window._d3n1.reload();
+  showAdminSt('Order saved ✓', 'ok');
+}
+
+function updateAdminCount() {
+  const el = document.getElementById('_adm-count');
+  if (el) el.textContent = `${adminLevels.length} levels`;
+}
+
+function renderAdminList() {
+  const c = document.getElementById('_adm-list');
+  if (!c) return;
+  updateAdminCount();
+  if (!adminLevels.length) {
+    c.innerHTML = `<div class="adm-empty"><div class="adm-empty-i">📭</div>No levels yet.</div>`;
+    return;
+  }
+  c.innerHTML = adminLevels.map((l, i) => `
+    <div class="adm-card" draggable="true" data-i="${i}" data-id="${l.id}">
+      <span class="adm-handle" title="Drag to reorder">⠿</span>
+      <span class="adm-r">#${l.position}</span>
+      <div class="adm-inf">
+        <div class="adm-nm">${escAdm(l.name)}</div>
+        <div class="adm-sub">${escAdm(l.creator || '—')} · Verifier: ${escAdm(l.verifier || '???')} · ${escAdm(l.length || '—')}</div>
+      </div>
+      <span class="adm-pts">${l.points || 0} pts</span>
+      ${l.is_verified ? '<span class="adm-vbadge">✓ Verified</span>' : ''}
+      <div class="adm-acts">
+        <button class="adm-ab" data-i="${i}" data-a="edit" title="Edit">✏️</button>
+        <button class="adm-ab del" data-i="${i}" data-a="del" title="Delete">🗑</button>
+      </div>
+    </div>
+  `).join('');
+
+  c.querySelectorAll('.adm-card').forEach(card => {
+    const i = parseInt(card.dataset.i);
+    card.querySelectorAll('.adm-ab').forEach(b => {
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        if (b.dataset.a === 'edit') openAdminForm(i);
+        else adminDeleteLevel(adminLevels[i].id, adminLevels[i].name);
+      });
+    });
+    card.addEventListener('dragstart', e => {
+      dragSrcIdx = i;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => card.classList.add('dragging'), 0);
+    });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); dragSrcIdx = null; });
+    card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      if (dragSrcIdx === null || dragSrcIdx === i) return;
+      const moved = adminLevels.splice(dragSrcIdx, 1)[0];
+      adminLevels.splice(i, 0, moved);
+      renderAdminList();
+      persistPositions();
+    });
+  });
+}
+
+function escAdm(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
+function openAdminForm(idx) {
+  editingId = idx !== null ? adminLevels[idx]?.id : null;
+  const lvl = idx !== null ? adminLevels[idx] : {};
+  formTags = lvl.tags ? lvl.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  const title = document.getElementById('_aff-title');
+  if (title) title.textContent = idx !== null ? `Edit — ${lvl.name}` : 'Add New Level';
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  set('_ff-pos',       lvl.position ?? (adminLevels.length + 1));
+  set('_ff-lid',       lvl.level_id ?? '');
+  set('_ff-name',      lvl.name ?? '');
+  set('_ff-creator',   lvl.creator ?? '');
+  set('_ff-verifier',  lvl.verifier === '???' ? '' : (lvl.verifier ?? ''));
+  set('_ff-publisher', lvl.publisher ?? '');
+  set('_ff-vid',       lvl.video_url ?? '');
+  set('_ff-points',    lvl.points ?? '');
+  set('_ff-length',    lvl.length ?? '');
+  set('_ff-objects',   lvl.objects ?? '');
+
+  renderTagPicker();
+  updateVerifiedPreview();
+
+  document.getElementById('_adm-form-ov')?.classList.add('open');
+  setTimeout(() => document.getElementById('_ff-name')?.focus(), 80);
+}
+
+function closeAdminForm() {
+  document.getElementById('_adm-form-ov')?.classList.remove('open');
+  editingId = null;
+  formTags = [];
+}
+
+function renderTagPicker() {
+  const wrap = document.getElementById('_ff-tags-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = ALL_TAGS.map(tag => {
+    const active = formTags.includes(tag);
+    return `<button type="button" class="adm-tag-chip${active ? ' active' : ''}" data-tag="${tag}">${tag}</button>`;
+  }).join('');
+  wrap.querySelectorAll('.adm-tag-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tag = btn.dataset.tag;
+      if (formTags.includes(tag)) { formTags = formTags.filter(t => t !== tag); btn.classList.remove('active'); }
+      else { formTags.push(tag); btn.classList.add('active'); }
+    });
+  });
+}
+
+function updateVerifiedPreview() {
+  const vi = document.getElementById('_ff-verifier');
+  const badge = document.getElementById('_ff-verified-preview');
+  if (!vi || !badge) return;
+  const val = vi.value.trim();
+  badge.textContent = val ? '✓ is_verified = true' : '✗ is_verified = false  (verifier = "???")';
+  badge.className = `adm-vi-preview ${val ? 'yes' : 'no'}`;
+}
+
+async function submitAdminForm() {
+  const get = id => document.getElementById(id)?.value ?? '';
+  const name = get('_ff-name').trim();
+  if (!name) { document.getElementById('_ff-name')?.focus(); showAdminSt('Name is required', 'err'); return; }
+
+  const btn = document.getElementById('_aff-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  const fields = {
+    position:  get('_ff-pos'),
+    level_id:  get('_ff-lid'),
+    name,
+    creator:   get('_ff-creator'),
+    verifier:  get('_ff-verifier'),
+    publisher: get('_ff-publisher'),
+    video_url: get('_ff-vid'),
+    tags:      formTags.join(','),
+    points:    get('_ff-points'),
+    length:    get('_ff-length'),
+    objects:   get('_ff-objects'),
+  };
+
+  try {
+    if (editingId !== null) await adminUpdateLevel(editingId, fields);
+    else await adminCreateLevel(fields);
+    closeAdminForm();
+  } catch (e) {
+    showAdminSt('Error: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Save'; }
+  }
+}
+
+function showAdminSt(msg, type) {
+  const el = document.getElementById('_adm-st');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `adm-st show ${type}`;
+  setTimeout(() => { el.className = 'adm-st'; }, 3500);
 }
 
 function injectAdminPanel() {
@@ -40,394 +265,268 @@ function injectAdminPanel() {
 
   const style = document.createElement('style');
   style.textContent = `
-#_adm{display:none;position:fixed;inset:0;background:rgba(0,0,6,.85);backdrop-filter:blur(14px);z-index:9999;align-items:center;justify-content:center;padding:16px;}
+#_adm{display:none;position:fixed;inset:0;background:rgba(0,0,6,.88);backdrop-filter:blur(16px);z-index:9999;align-items:center;justify-content:center;padding:16px;}
 #_adm.open{display:flex;}
 @keyframes _admIn{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
-#_adm-pw-wrap{width:100%;max-width:380px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;box-shadow:0 32px 80px rgba(0,0,0,.65);overflow:hidden;animation:_admIn .26s cubic-bezier(.4,0,.2,1);}
-#_adm-pw-top{background:var(--accent);padding:36px 28px 26px;text-align:center;}
-.adm-lock-icon{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:1.55rem;margin:0 auto 14px;}
-#_adm-pw-top h2{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;letter-spacing:2px;color:#fff;margin:0;}
-#_adm-pw-top p{font-size:.76rem;color:rgba(255,255,255,.6);margin-top:5px;letter-spacing:.5px;}
-#_adm-pw-body{padding:26px 28px 24px;}
-.adm-field-wrap{position:relative;}
-.adm-field-wrap input{width:100%;padding:12px 44px 12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:.92rem;font-family:inherit;outline:none;transition:border .15s;letter-spacing:.04em;}
-.adm-field-wrap input:focus{border-color:var(--accent);}
-.adm-pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;color:var(--text-muted);}
-#_adm-err{font-size:.75rem;color:#ff4c4c;margin-top:9px;min-height:18px;display:flex;align-items:center;gap:4px;font-weight:600;}
-#_adm-login-btn{width:100%;margin-top:14px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:1.05rem;font-weight:700;letter-spacing:1.2px;cursor:pointer;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;}
+#_adm-pw-wrap{width:100%;max-width:380px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;box-shadow:0 32px 80px rgba(0,0,0,.7);overflow:hidden;animation:_admIn .26s cubic-bezier(.4,0,.2,1);}
+#_adm-pw-top{background:var(--accent);padding:32px 28px 24px;text-align:center;}
+.adm-lock-ico{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 12px;}
+#_adm-pw-top h2{font-size:1.1rem;font-weight:800;letter-spacing:2px;color:#fff;margin:0;text-transform:uppercase;}
+#_adm-pw-top p{font-size:.73rem;color:rgba(255,255,255,.6);margin-top:5px;letter-spacing:.4px;}
+#_adm-pw-body{padding:24px 26px 22px;}
+.adm-pw-field{position:relative;}
+.adm-pw-field input{width:100%;padding:12px 42px 12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:.9rem;font-family:inherit;outline:none;transition:border .15s;box-sizing:border-box;}
+.adm-pw-field input:focus{border-color:var(--accent);}
+.adm-pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.88rem;color:var(--text-muted);padding:0;}
+#_adm-pw-err{font-size:.74rem;color:#ff4c4c;margin-top:8px;min-height:16px;font-weight:700;}
+#_adm-login-btn{width:100%;margin-top:14px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:.94rem;font-weight:800;letter-spacing:1px;cursor:pointer;transition:background .15s,opacity .15s;text-transform:uppercase;}
 #_adm-login-btn:hover{background:var(--accent-bright);}
-#_adm-login-btn:active{transform:scale(.98);}
-#_adm-login-btn.loading{opacity:.65;pointer-events:none;}
-.adm-cancel{display:block;text-align:center;margin-top:14px;font-size:.75rem;color:var(--text-muted);cursor:pointer;letter-spacing:.3px;}
-.adm-cancel:hover{color:var(--text-primary);}
-#_adm-editor-wrap{width:100%;max-width:900px;max-height:92vh;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;box-shadow:0 32px 80px rgba(0,0,0,.65);display:flex;flex-direction:column;overflow:hidden;animation:_admIn .26s cubic-bezier(.4,0,.2,1);}
-#_adm-head{background:var(--accent);color:#fff;padding:13px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
-#_adm-head h2{font-family:'Rajdhani',sans-serif;font-size:1.05rem;font-weight:700;letter-spacing:1.8px;flex:1;}
-.adm-tabs{display:flex;background:rgba(255,255,255,.14);border-radius:8px;padding:3px;gap:2px;}
-.adm-tabs button{padding:4px 16px;border-radius:6px;border:none;background:transparent;color:rgba(255,255,255,.7);font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .14s;letter-spacing:.4px;}
-.adm-tabs button.active{background:#fff;color:var(--accent);}
-#_adm-x{width:29px;height:29px;border-radius:50%;background:rgba(255,255,255,.18);border:none;color:#fff;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .14s;flex-shrink:0;}
-#_adm-x:hover{background:rgba(255,255,255,.3);}
-#_adm-body{flex:1;overflow:hidden;display:flex;flex-direction:column;}
-#_adm-vis{display:flex;flex-direction:column;overflow:hidden;flex:1;}
-#_adm-vis.hidden,#_adm-json.hidden{display:none;}
-.adm-bar{padding:11px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;}
-.adm-bar-l{display:flex;gap:8px;align-items:center;flex:1;}
-.adm-bar-r{display:flex;gap:8px;}
-.ab{padding:7px 16px;border-radius:8px;border:none;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .14s;letter-spacing:.3px;}
+#_adm-login-btn:disabled{opacity:.55;pointer-events:none;}
+.adm-cancel-link{display:block;text-align:center;margin-top:12px;font-size:.73rem;color:var(--text-muted);cursor:pointer;letter-spacing:.3px;}
+.adm-cancel-link:hover{color:var(--text-primary);}
+#_adm-editor{width:100%;max-width:920px;max-height:92vh;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;box-shadow:0 32px 80px rgba(0,0,0,.7);display:flex;flex-direction:column;overflow:hidden;animation:_admIn .26s cubic-bezier(.4,0,.2,1);}
+#_adm-editor.hidden{display:none;}
+#_adm-head{background:var(--accent);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+#_adm-head h2{font-size:.98rem;font-weight:800;letter-spacing:2px;flex:1;text-transform:uppercase;margin:0;}
+#_adm-count{font-size:.73rem;font-weight:700;background:rgba(255,255,255,.18);padding:4px 11px;border-radius:20px;white-space:nowrap;}
+.adm-st{font-size:.74rem;font-weight:700;padding:4px 12px;border-radius:8px;opacity:0;transition:opacity .3s;white-space:nowrap;}
+.adm-st.show{opacity:1;}.adm-st.ok{background:rgba(0,200,100,.14);color:#00c864;}.adm-st.err{background:rgba(255,60,60,.12);color:#ff4c4c;}
+#_adm-x{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.18);border:none;color:#fff;cursor:pointer;font-size:.88rem;display:flex;align-items:center;justify-content:center;transition:background .12s;flex-shrink:0;}
+#_adm-x:hover{background:rgba(255,255,255,.32);}
+#_adm-toolbar{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
+.ab{padding:7px 15px;border-radius:8px;border:none;font-family:inherit;font-size:.79rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .13s;letter-spacing:.3px;}
 .ab-pri{background:var(--accent);color:#fff;}.ab-pri:hover{background:var(--accent-bright);}
-.ab-suc{background:#00c864;color:#fff;}.ab-suc:hover{background:#00d870;}
-.ab-ghost{background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border);}.ab-ghost:hover{color:var(--text-primary);background:var(--bg-active);}
-.ab-del{background:rgba(255,60,60,.08);color:#ff4c4c;border:1px solid rgba(255,60,60,.22);}.ab-del:hover{background:rgba(255,60,60,.16);}
-.adm-cnt{font-size:.77rem;font-weight:700;color:var(--text-muted);background:var(--bg-hover);padding:4px 10px;border-radius:20px;}
-.adm-st{font-size:.77rem;font-weight:700;padding:4px 12px;border-radius:8px;opacity:0;transition:opacity .3s;}
-.adm-st.show{opacity:1;}.adm-st.ok{background:rgba(0,200,100,.12);color:#00c864;}.adm-st.err{background:rgba(255,60,60,.1);color:#ff4c4c;}
-#_adm-list{overflow-y:auto;flex:1;padding:12px 20px;display:flex;flex-direction:column;gap:5px;}
-.adm-card{display:flex;align-items:center;gap:11px;padding:10px 13px;background:var(--bg-sidebar);border:1px solid var(--border-card);border-radius:10px;cursor:default;transition:border-color .13s,box-shadow .13s;animation:_admIn .18s ease;}
-.adm-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
-.adm-card.dragging{opacity:.35;}.adm-card.drag-over{border-color:var(--accent);background:var(--bg-active);}
-.adm-handle{color:var(--text-muted);cursor:grab;font-size:.88rem;user-select:none;flex-shrink:0;padding:2px 3px;}.adm-handle:active{cursor:grabbing;}
-.adm-r{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.82rem;color:var(--text-muted);min-width:26px;text-align:right;}
-.adm-ico{width:28px;height:28px;border-radius:6px;object-fit:contain;flex-shrink:0;}
+.ab-ghost{background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border);}.ab-ghost:hover{color:var(--text-primary);}
+#_adm-list{overflow-y:auto;flex:1;padding:10px 18px;display:flex;flex-direction:column;gap:5px;}
+.adm-card{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-sidebar);border:1px solid var(--border-card);border-radius:10px;cursor:default;transition:border-color .12s,box-shadow .12s;animation:_admIn .17s ease;}
+.adm-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,111,255,.12);}
+.adm-card.dragging{opacity:.3;}.adm-card.drag-over{border-color:var(--accent);background:var(--bg-active);}
+.adm-handle{color:var(--text-muted);cursor:grab;font-size:.86rem;user-select:none;flex-shrink:0;padding:2px 3px;}.adm-handle:active{cursor:grabbing;}
+.adm-r{font-family:'Space Mono',monospace;font-size:.78rem;font-weight:700;color:var(--text-muted);min-width:28px;text-align:right;flex-shrink:0;}
 .adm-inf{flex:1;min-width:0;}
-.adm-nm{font-weight:700;font-size:.84rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.adm-sub{font-size:.72rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.adm-diff-tag{font-size:.72rem;font-weight:700;color:var(--accent-bright);background:var(--accent-dim);border:1px solid rgba(26,111,255,.2);padding:2px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.adm-nm{font-weight:700;font-size:.83rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adm-sub{font-size:.7rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.adm-pts{font-size:.71rem;font-weight:700;color:var(--accent-bright,#4d8fff);background:rgba(26,111,255,.1);border:1px solid rgba(26,111,255,.18);padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.adm-vbadge{font-size:.68rem;font-weight:700;color:#00c864;background:rgba(0,200,100,.1);border:1px solid rgba(0,200,100,.22);padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
 .adm-acts{display:flex;gap:3px;flex-shrink:0;}
-.adm-ab{width:29px;height:29px;border-radius:7px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:.82rem;display:flex;align-items:center;justify-content:center;transition:background .11s,color .11s;}
+.adm-ab{width:28px;height:28px;border-radius:7px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;transition:background .1s,color .1s;}
 .adm-ab:hover{background:var(--bg-hover);color:var(--text-primary);}
 .adm-ab.del:hover{background:rgba(255,60,60,.1);color:#ff4c4c;}
-.adm-empty{text-align:center;padding:60px 20px;color:var(--text-muted);font-size:.88rem;}
-.adm-empty-i{font-size:2.5rem;margin-bottom:10px;}
-#_adm-form-ov{display:none;position:absolute;inset:0;z-index:10;background:rgba(0,0,0,.38);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;}
+.adm-empty{text-align:center;padding:56px 20px;color:var(--text-muted);font-size:.86rem;}
+.adm-empty-i{font-size:2.2rem;margin-bottom:10px;}
+#_adm-form-ov{display:none;position:absolute;inset:0;z-index:10;background:rgba(0,0,0,.44);backdrop-filter:blur(5px);align-items:flex-end;justify-content:center;}
 #_adm-form-ov.open{display:flex;}
-#_adm-form-box{width:100%;max-width:900px;background:var(--bg-card);border-top:1px solid var(--border);border-radius:20px 20px 0 0;box-shadow:0 -14px 48px rgba(0,0,0,.28);animation:_formUp .22s cubic-bezier(.4,0,.2,1);max-height:88vh;overflow-y:auto;}
-@keyframes _formUp{from{transform:translateY(36px);opacity:0}to{transform:none;opacity:1}}
-#_adm-form-hd{position:sticky;top:0;z-index:1;background:var(--bg-card);border-bottom:1px solid var(--border);padding:15px 22px;display:flex;align-items:center;justify-content:space-between;}
-#_adm-form-hd h3{font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700;letter-spacing:.8px;color:var(--text-primary);}
-#_adm-form-cls{width:26px;height:26px;border-radius:50%;background:var(--bg-hover);border:none;cursor:pointer;color:var(--text-muted);font-size:.82rem;display:flex;align-items:center;justify-content:center;transition:background .12s;}
-#_adm-form-cls:hover{background:var(--border);color:var(--text-primary);}
-.adm-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px 22px;}
-@media(max-width:560px){.adm-fgrid{grid-template-columns:1fr;}}
-.adm-fg{display:flex;flex-direction:column;gap:5px;}.adm-fg.full{grid-column:1/-1;}
-.adm-fl{font-size:.71rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);}
-.adm-fi,.adm-fs{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-family:inherit;font-size:.87rem;outline:none;transition:border .14s;width:100%;appearance:none;}
-.adm-fi:focus,.adm-fs:focus{border-color:var(--accent);}
+#_adm-form-box{width:100%;max-width:920px;background:var(--bg-card);border-top:1px solid var(--border);border-radius:20px 20px 0 0;box-shadow:0 -16px 52px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto;animation:_fUp .22s cubic-bezier(.4,0,.2,1);}
+@keyframes _fUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+#_aff-head{position:sticky;top:0;z-index:2;background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+#_aff-title{font-size:.94rem;font-weight:800;letter-spacing:.5px;color:var(--text-primary);}
+#_aff-cls{width:26px;height:26px;border-radius:50%;background:var(--bg-hover);border:none;cursor:pointer;color:var(--text-muted);font-size:.8rem;display:flex;align-items:center;justify-content:center;transition:background .11s;}
+#_aff-cls:hover{background:var(--border);color:var(--text-primary);}
+.adm-fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px 20px 0;}
+.adm-fgrid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 20px 0;}
+.adm-fgrid-full{padding:12px 20px 0;}
+@media(max-width:640px){.adm-fgrid,.adm-fgrid-3{grid-template-columns:1fr;}}
+.adm-fg{display:flex;flex-direction:column;gap:5px;}
+.adm-fl{font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);}
+.adm-fl small{font-size:.62rem;text-transform:none;letter-spacing:0;font-weight:400;}
+.adm-fi{padding:10px 11px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-family:inherit;font-size:.86rem;outline:none;transition:border .13s;width:100%;box-sizing:border-box;}
+.adm-fi:focus{border-color:var(--accent);}
 .adm-fi::placeholder{color:var(--text-muted);}
-.adm-ffoot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:var(--bg-card);z-index:1;}
-#_adm-json{display:flex;flex-direction:column;overflow:hidden;flex:1;}
-.adm-jtb{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.adm-jhint{font-size:.74rem;color:var(--text-muted);flex:1;line-height:1.4;}
-#_adm-jta{flex:1;padding:16px 20px;border:none;outline:none;resize:none;background:var(--bg-page);color:var(--text-primary);font-family:'Courier New',monospace;font-size:.78rem;line-height:1.75;}
-#_adm-list::-webkit-scrollbar,#_adm-form-box::-webkit-scrollbar,#_adm-jta::-webkit-scrollbar{width:4px;}
-#_adm-list::-webkit-scrollbar-thumb,#_adm-form-box::-webkit-scrollbar-thumb,#_adm-jta::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
-`;
+.adm-vi-preview{font-size:.71rem;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block;margin-top:4px;}
+.adm-vi-preview.yes{color:#00c864;background:rgba(0,200,100,.1);}
+.adm-vi-preview.no{color:#ff8c42;background:rgba(255,140,66,.1);}
+.adm-tags-section{padding:14px 20px 0;}
+.adm-tags-label{font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;}
+#_ff-tags-wrap{display:flex;flex-wrap:wrap;gap:6px;}
+.adm-tag-chip{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg-hover);color:var(--text-muted);font-family:inherit;font-size:.73rem;font-weight:700;cursor:pointer;transition:all .12s;letter-spacing:.3px;}
+.adm-tag-chip:hover{border-color:var(--accent);color:var(--text-primary);}
+.adm-tag-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 2px rgba(26,111,255,.25);}
+#_aff-foot{position:sticky;bottom:0;z-index:2;background:var(--bg-card);border-top:1px solid var(--border);padding:13px 20px;display:flex;gap:10px;justify-content:flex-end;}
+#_aff-save-btn{padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:.86rem;font-weight:800;cursor:pointer;transition:background .13s,opacity .13s;letter-spacing:.5px;}
+#_aff-save-btn:hover{background:var(--accent-bright);}
+#_aff-save-btn:disabled{opacity:.55;pointer-events:none;}
+#_aff-cancel-btn{padding:10px 20px;background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:.86rem;font-weight:700;cursor:pointer;transition:background .12s;}
+#_aff-cancel-btn:hover{background:var(--bg-active);}
+  `;
   document.head.appendChild(style);
 
   const overlay = document.createElement('div');
   overlay.id = '_adm';
-  overlay.setAttribute('aria-hidden','true');
   overlay.innerHTML = `
     <div id="_adm-pw-wrap">
       <div id="_adm-pw-top">
-        <div class="adm-lock-icon">🔐</div>
-        <h2>ADMIN ACCESS</h2>
-        <p>d3n1GDPS List Manager</p>
+        <div class="adm-lock-ico">🔐</div>
+        <h2>Admin Panel</h2>
+        <p>D3N1GDPS List Editor</p>
       </div>
       <div id="_adm-pw-body">
-        <div class="adm-field-wrap">
-          <input type="password" id="_adm-pi" placeholder="Enter admin password" autocomplete="off" spellcheck="false">
-          <button class="adm-pw-eye" id="_adm-eye" tabindex="-1">👁</button>
+        <div class="adm-pw-field">
+          <input type="password" id="_adm-pi" placeholder="Enter admin password" autocomplete="off" />
+          <button class="adm-pw-eye" id="_adm-pw-eye" tabindex="-1">👁</button>
         </div>
-        <div id="_adm-err"></div>
-        <button id="_adm-login-btn"><span id="_adm-ll">Unlock Panel</span></button>
-        <span class="adm-cancel" id="_adm-cancel">Cancel</span>
+        <div id="_adm-pw-err"></div>
+        <button id="_adm-login-btn">Unlock →</button>
+        <span class="adm-cancel-link" id="_adm-pw-cancel">Cancel</span>
       </div>
     </div>
 
-    <div id="_adm-editor-wrap" style="display:none">
+    <div id="_adm-editor" class="hidden">
       <div id="_adm-head">
-        <h2>⚙ LIST EDITOR</h2>
-        <div class="adm-tabs">
-          <button id="_tv" class="active">🗂 Visual</button>
-          <button id="_tj">{ } JSON</button>
-        </div>
+        <h2>🛠 List Editor</h2>
+        <span id="_adm-count">— levels</span>
+        <span id="_adm-st" class="adm-st"></span>
         <button id="_adm-x">✕</button>
       </div>
-      <div id="_adm-body">
-
-        <div id="_adm-vis">
-          <div class="adm-bar">
-            <div class="adm-bar-l">
-              <button class="ab ab-pri" id="_adm-add">＋ Add Level</button>
-              <span class="adm-cnt" id="_adm-cnt">0 levels</span>
-              <span class="adm-st" id="_adm-st"></span>
-            </div>
-            <div class="adm-bar-r">
-              <button class="ab ab-ghost" id="_adm-reload">↺ Reload file</button>
-              <button class="ab ab-del"   id="_adm-clrov">🗑 Clear override</button>
-              <button class="ab ab-suc"   id="_adm-save">💾 Save &amp; Apply</button>
-            </div>
-          </div>
-          <div id="_adm-list"></div>
-
-          <div id="_adm-form-ov">
-            <div id="_adm-form-box">
-              <div id="_adm-form-hd">
-                <h3 id="_adm-form-title">Add Level</h3>
-                <button id="_adm-form-cls">✕</button>
-              </div>
-              <div class="adm-fgrid">
-                <div class="adm-fg"><label class="adm-fl">Rank #</label><input class="adm-fi" id="_ff-rank" type="number" min="1" placeholder="1"></div>
-                <div class="adm-fg"><label class="adm-fl">Level ID</label><input class="adm-fi" id="_ff-lid" type="text" placeholder="98765432"></div>
-                <div class="adm-fg full"><label class="adm-fl">Level Name</label><input class="adm-fi" id="_ff-name" type="text" placeholder="e.g. Sonic Wave"></div>
-                <div class="adm-fg">
-                  <label class="adm-fl">Difficulty</label>
-                  <select class="adm-fs" id="_ff-diff">
-                    ${DIFFICULTIES.map(d=>`<option value="${d}">${d.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
-                  </select>
-                </div>
-                <div class="adm-fg"><label class="adm-fl">Creator</label><input class="adm-fi" id="_ff-creator" type="text" placeholder="Creator name"></div>
-                <div class="adm-fg"><label class="adm-fl">Verifier</label><input class="adm-fi" id="_ff-verifier" type="text" placeholder="Verifier name"></div>
-                <div class="adm-fg"><label class="adm-fl">Publisher</label><input class="adm-fi" id="_ff-publisher" type="text" placeholder="Publisher name"></div>
-                <div class="adm-fg full"><label class="adm-fl">YouTube Video ID</label><input class="adm-fi" id="_ff-vid" type="text" placeholder="dQw4w9WgXcQ  (ID after ?v= or youtu.be/)"></div>
-              </div>
-              <div class="adm-ffoot">
-                <button class="ab ab-ghost" id="_ff-cancel">Cancel</button>
-                <button class="ab ab-pri"   id="_ff-save">Save Level</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div id="_adm-json" class="hidden">
-          <div class="adm-jtb">
-            <span class="adm-jhint">Raw JSON — edit then click Apply to sync back to the visual editor.</span>
-            <button class="ab ab-ghost" id="_adm-jfmt">✨ Format</button>
-            <button class="ab ab-pri"   id="_adm-japply">✓ Apply JSON</button>
-          </div>
-          <textarea id="_adm-jta" spellcheck="false" placeholder="Loading..."></textarea>
-        </div>
-
+      <div id="_adm-toolbar">
+        <button class="ab ab-pri" id="_adm-add-btn">＋ Add Level</button>
+        <button class="ab ab-ghost" id="_adm-reload-btn">↺ Reload</button>
       </div>
-    </div>`;
+      <div id="_adm-list"></div>
 
+      <div id="_adm-form-ov">
+        <div id="_adm-form-box">
+          <div id="_aff-head">
+            <span id="_aff-title">Add New Level</span>
+            <button id="_aff-cls">✕</button>
+          </div>
+
+          <div class="adm-fgrid">
+            <div class="adm-fg">
+              <label class="adm-fl">Position</label>
+              <input class="adm-fi" type="number" id="_ff-pos" placeholder="1" min="1" />
+            </div>
+            <div class="adm-fg">
+              <label class="adm-fl">Level ID</label>
+              <input class="adm-fi" type="text" id="_ff-lid" placeholder="GD level ID" />
+            </div>
+            <div class="adm-fg">
+              <label class="adm-fl">Name <span style="color:#ff5555">*</span></label>
+              <input class="adm-fi" type="text" id="_ff-name" placeholder="Level name" />
+            </div>
+          </div>
+
+          <div class="adm-fgrid">
+            <div class="adm-fg">
+              <label class="adm-fl">Creator</label>
+              <input class="adm-fi" type="text" id="_ff-creator" placeholder="Creator name" />
+            </div>
+            <div class="adm-fg">
+              <label class="adm-fl">Verifier <small>(empty → "???" + unverified)</small></label>
+              <input class="adm-fi" type="text" id="_ff-verifier" placeholder="Verifier name" />
+              <span id="_ff-verified-preview" class="adm-vi-preview no">✗ is_verified = false</span>
+            </div>
+            <div class="adm-fg">
+              <label class="adm-fl">Publisher</label>
+              <input class="adm-fi" type="text" id="_ff-publisher" placeholder="Publisher name" />
+            </div>
+          </div>
+
+          <div class="adm-fgrid-full">
+            <div class="adm-fg">
+              <label class="adm-fl">Video URL <small>(YouTube / Google Drive)</small></label>
+              <input class="adm-fi" type="url" id="_ff-vid" placeholder="https://..." />
+            </div>
+          </div>
+
+          <div class="adm-fgrid-3">
+            <div class="adm-fg">
+              <label class="adm-fl">Points</label>
+              <input class="adm-fi" type="number" id="_ff-points" placeholder="e.g. 250" step="0.1" />
+            </div>
+            <div class="adm-fg">
+              <label class="adm-fl">Length <small>e.g. 1m 14s</small></label>
+              <input class="adm-fi" type="text" id="_ff-length" placeholder="1m 14s" />
+            </div>
+            <div class="adm-fg">
+              <label class="adm-fl">Objects</label>
+              <input class="adm-fi" type="number" id="_ff-objects" placeholder="e.g. 45000" />
+            </div>
+          </div>
+
+          <div class="adm-tags-section">
+            <div class="adm-tags-label">Tags — click to toggle</div>
+            <div id="_ff-tags-wrap"></div>
+          </div>
+
+          <div style="height:8px"></div>
+
+          <div id="_aff-foot">
+            <button id="_aff-cancel-btn">Cancel</button>
+            <button id="_aff-save-btn">✓ Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
   document.body.appendChild(overlay);
 
-  document.getElementById('_adm-pi').addEventListener('keydown', e => { if(e.key==='Enter') attemptLogin(); });
-  document.getElementById('_adm-login-btn').addEventListener('click', attemptLogin);
-  document.getElementById('_adm-cancel').addEventListener('click', closeAdmin);
-  document.getElementById('_adm-eye').addEventListener('click', () => {
-    const i = document.getElementById('_adm-pi'); i.type = i.type==='password'?'text':'password';
+  document.getElementById('_adm-pw-eye').addEventListener('click', () => {
+    const inp = document.getElementById('_adm-pi');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
   });
-  document.getElementById('_adm-x').addEventListener('click', closeAdmin);
-  overlay.addEventListener('click', e => { if(e.target===overlay) closeAdmin(); });
-
-  document.getElementById('_tv').addEventListener('click', () => switchTab('vis'));
-  document.getElementById('_tj').addEventListener('click', () => { syncJson(); switchTab('json'); });
-
-  document.getElementById('_adm-add').addEventListener('click',    () => openForm(null));
-  document.getElementById('_adm-save').addEventListener('click',   saveApply);
-  document.getElementById('_adm-reload').addEventListener('click', reloadFile);
-  document.getElementById('_adm-clrov').addEventListener('click', clearOverride);
-
-  document.getElementById('_adm-form-cls').addEventListener('click', closeForm);
-  document.getElementById('_ff-cancel').addEventListener('click',    closeForm);
-  document.getElementById('_ff-save').addEventListener('click',      submitForm);
+  document.getElementById('_adm-pi').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('_adm-login-btn').click();
+    document.getElementById('_adm-pw-err').textContent = '';
+  });
+  document.getElementById('_adm-login-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('_adm-login-btn');
+    const pw  = document.getElementById('_adm-pi').value;
+    const err = document.getElementById('_adm-pw-err');
+    btn.disabled = true; btn.textContent = '…';
+    const hash = await sha256(pw);
+    if (hash === ADMIN_HASH) {
+      adminAuthed = true;
+      document.getElementById('_adm-pw-wrap').style.display = 'none';
+      document.getElementById('_adm-editor').classList.remove('hidden');
+      loadAdminLevels();
+    } else {
+      err.textContent = '✗ Wrong password';
+      document.getElementById('_adm-pi').value = '';
+      document.getElementById('_adm-pi').focus();
+      btn.disabled = false; btn.textContent = 'Unlock →';
+    }
+  });
+  document.getElementById('_adm-pw-cancel').addEventListener('click', closeAdminPanel);
+  document.getElementById('_adm-x').addEventListener('click', closeAdminPanel);
+  document.getElementById('_adm-add-btn').addEventListener('click', () => openAdminForm(null));
+  document.getElementById('_adm-reload-btn').addEventListener('click', loadAdminLevels);
+  document.getElementById('_aff-cls').addEventListener('click', closeAdminForm);
+  document.getElementById('_aff-cancel-btn').addEventListener('click', closeAdminForm);
+  document.getElementById('_aff-save-btn').addEventListener('click', submitAdminForm);
+  document.getElementById('_ff-verifier').addEventListener('input', updateVerifiedPreview);
+  document.getElementById('_adm').addEventListener('click', e => {
+    if (e.target === document.getElementById('_adm')) closeAdminPanel();
+  });
   document.getElementById('_adm-form-ov').addEventListener('click', e => {
-    if(e.target===document.getElementById('_adm-form-ov')) closeForm();
+    if (e.target === document.getElementById('_adm-form-ov')) closeAdminForm();
   });
-
-  document.getElementById('_adm-jfmt').addEventListener('click',   fmtJson);
-  document.getElementById('_adm-japply').addEventListener('click', applyJson);
-}
-
-async function attemptLogin() {
-  const input = document.getElementById('_adm-pi');
-  const btn   = document.getElementById('_adm-login-btn');
-  const err   = document.getElementById('_adm-err');
-  btn.classList.add('loading');
-  document.getElementById('_adm-ll').textContent = 'Verifying...';
-  err.textContent = '';
-  await new Promise(r=>setTimeout(r,380));
-  const h = await sha256(input.value);
-  if (h === ADMIN_HASH) {
-    adminAuthed = true;
-    input.value = '';
-    document.getElementById('_adm-pw-wrap').style.display = 'none';
-    document.getElementById('_adm-editor-wrap').style.display = '';
-    await loadEditor();
-  } else {
-    err.textContent = '✖ Incorrect password. Try again.';
-    input.value = ''; input.focus();
-  }
-  btn.classList.remove('loading');
-  document.getElementById('_adm-ll').textContent = 'Unlock Panel';
-}
-
-async function loadEditor() {
-  try {
-    const c = localStorage.getItem('dll-levels-override');
-    adminLevels = c ? JSON.parse(c) : await fetch('levels.json').then(r=>r.json());
-  } catch { adminLevels = []; }
-  renderList();
-}
-
-async function reloadFile() {
-  if(!confirm('Reload from levels.json? Unsaved changes will be lost.')) return;
-  localStorage.removeItem('dll-levels-override');
-  try { adminLevels = await fetch('levels.json?'+Date.now()).then(r=>r.json()); }
-  catch { adminLevels = []; }
-  renderList(); showSt('Reloaded from levels.json','ok');
-}
-
-function clearOverride(){
-  if(!confirm('Clear the localStorage override? Site reverts to levels.json.')) return;
-  localStorage.removeItem('dll-levels-override');
-  if(window.DLL?.reload) window.DLL.reload();
-  reloadFile();
-}
-
-function renderList() {
-  const c = document.getElementById('_adm-list');
-  document.getElementById('_adm-cnt').textContent = `${adminLevels.length} level${adminLevels.length!==1?'s':''}`;
-  if(!adminLevels.length){
-    c.innerHTML=`<div class="adm-empty"><div class="adm-empty-i">📋</div>No levels yet. Click "Add Level" to start.</div>`;
-    return;
-  }
-  c.innerHTML='';
-  adminLevels.forEach((lvl,i)=>{
-    const card = document.createElement('div');
-    card.className='adm-card'; card.draggable=true; card.dataset.i=i;
-    card.innerHTML=`
-      <span class="adm-handle" title="Drag to reorder">⠿</span>
-      <span class="adm-r">#${lvl.id}</span>
-      <img class="adm-ico" src="assets/difficulty/${lvl.difficulty||'na'}.svg" alt="" onerror="this.src='assets/difficulty/na.svg'">
-      <div class="adm-inf">
-        <div class="adm-nm">${escHtml(lvl.name||'—')}</div>
-        <div class="adm-sub">ID: ${escHtml(String(lvl.levelId||'—'))} · ${escHtml(lvl.creator||'—')} · video: ${escHtml(lvl.videoId||'—')}</div>
-      </div>
-      <span class="adm-diff-tag">${(lvl.difficulty||'n/a').replace(/_/g,' ')}</span>
-      <div class="adm-acts">
-        <button class="adm-ab" data-a="edit" data-i="${i}" title="Edit">✏️</button>
-        <button class="adm-ab del" data-a="del" data-i="${i}" title="Delete">🗑</button>
-      </div>`;
-    card.querySelectorAll('[data-a]').forEach(b=>{
-      b.addEventListener('click', e=>{
-        e.stopPropagation();
-        const idx=parseInt(b.dataset.i);
-        if(b.dataset.a==='edit') openForm(idx);
-        else delLevel(idx);
-      });
-    });
-    card.addEventListener('dragstart',e=>{
-      e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',i);
-      setTimeout(()=>card.classList.add('dragging'),0);
-    });
-    card.addEventListener('dragend',()=>card.classList.remove('dragging'));
-    card.addEventListener('dragover',e=>{e.preventDefault();card.classList.add('drag-over');});
-    card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
-    card.addEventListener('drop',e=>{
-      e.preventDefault(); card.classList.remove('drag-over');
-      const from=parseInt(e.dataTransfer.getData('text/plain'));
-      if(from===i) return;
-      const m=adminLevels.splice(from,1)[0]; adminLevels.splice(i,0,m);
-      renum(); renderList();
-    });
-    c.appendChild(card);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('_adm-form-ov')?.classList.contains('open')) closeAdminForm();
+      else closeAdminPanel();
+    }
   });
 }
 
-function openForm(idx){
-  editingIndex=idx;
-  document.getElementById('_adm-form-title').textContent = idx===null?'Add New Level':`Edit Level #${adminLevels[idx]?.id}`;
-  const lvl = idx!==null ? adminLevels[idx] : {};
-  document.getElementById('_ff-rank').value     = idx!==null ? lvl.id       : adminLevels.length+1;
-  document.getElementById('_ff-lid').value      = lvl.levelId  ||'';
-  document.getElementById('_ff-name').value     = lvl.name     ||'';
-  document.getElementById('_ff-diff').value     = lvl.difficulty||'extreme_demon';
-  document.getElementById('_ff-creator').value  = lvl.creator  ||'';
-  document.getElementById('_ff-verifier').value = lvl.verifier ||'';
-  document.getElementById('_ff-publisher').value= lvl.publisher||'';
-  document.getElementById('_ff-vid').value      = lvl.videoId  ||'';
-  document.getElementById('_adm-form-ov').classList.add('open');
-  setTimeout(()=>document.getElementById('_ff-name').focus(),80);
-}
-
-function closeForm(){ document.getElementById('_adm-form-ov').classList.remove('open'); editingIndex=null; }
-
-function submitForm(){
-  const name=document.getElementById('_ff-name').value.trim();
-  if(!name){ document.getElementById('_ff-name').focus(); return; }
-  const entry={
-    id:        parseInt(document.getElementById('_ff-rank').value)||adminLevels.length+1,
-    levelId:   document.getElementById('_ff-lid').value.trim(),
-    name,
-    difficulty:document.getElementById('_ff-diff').value,
-    creator:   document.getElementById('_ff-creator').value.trim(),
-    verifier:  document.getElementById('_ff-verifier').value.trim(),
-    publisher: document.getElementById('_ff-publisher').value.trim(),
-    videoId:   document.getElementById('_ff-vid').value.trim(),
-  };
-  if(editingIndex!==null) adminLevels[editingIndex]=entry;
-  else adminLevels.push(entry);
-  adminLevels.sort((a,b)=>a.id-b.id); renum(); renderList(); closeForm();
-  showSt(editingIndex!==null?'Level updated ✓':'Level added ✓','ok');
-}
-
-function delLevel(i){
-  if(!confirm(`Delete "${adminLevels[i]?.name}"?`)) return;
-  adminLevels.splice(i,1); renum(); renderList(); showSt('Deleted','ok');
-}
-
-function renum(){ adminLevels.forEach((l,i)=>{ l.id=i+1; }); }
-
-function saveApply(){
-  localStorage.setItem('dll-levels-override', JSON.stringify(adminLevels));
-  if(window.DLL?.reload) window.DLL.reload();
-  showSt('Saved & applied! 🎉','ok');
-}
-
-function syncJson(){ document.getElementById('_adm-jta').value = JSON.stringify(adminLevels,null,2); }
-function fmtJson(){
-  const ta=document.getElementById('_adm-jta');
-  try{ ta.value=JSON.stringify(JSON.parse(ta.value),null,2); } catch{ showSt('Invalid JSON','err'); }
-}
-function applyJson(){
-  try{
-    adminLevels=JSON.parse(document.getElementById('_adm-jta').value);
-    renderList(); switchTab('vis'); showSt('JSON applied','ok');
-  } catch(e){ showSt('JSON Error: '+e.message,'err'); }
-}
-
-function switchTab(v){
-  ['vis','json'].forEach(t=>{
-    const el=document.getElementById(`_adm-${t}`);
-    const btn=document.getElementById(`_t${t[0]}`);
-    el.classList.toggle('hidden',t!==v);
-    btn.classList.toggle('active',t===v);
-  });
-}
-
-function showSt(msg,type){
-  const el=document.getElementById('_adm-st');
-  el.textContent=msg; el.className=`adm-st show ${type}`;
-  setTimeout(()=>{ el.className='adm-st'; },3000);
-}
-
-function openAdmin(){
+function openAdminPanel() {
   injectAdminPanel();
   document.getElementById('_adm').classList.add('open');
-  if(!adminAuthed){
-    setTimeout(()=>document.getElementById('_adm-pi')?.focus(),120);
+  if (!adminAuthed) {
+    setTimeout(() => document.getElementById('_adm-pi')?.focus(), 120);
   } else {
-    document.getElementById('_adm-pw-wrap').style.display='none';
-    document.getElementById('_adm-editor-wrap').style.display='';
-    loadEditor();
+    document.getElementById('_adm-pw-wrap').style.display = 'none';
+    document.getElementById('_adm-editor').classList.remove('hidden');
+    loadAdminLevels();
   }
 }
-function closeAdmin(){ document.getElementById('_adm')?.classList.remove('open'); }
 
-document.addEventListener('keydown', e=>{
-  if(e.ctrlKey && e.shiftKey && e.key==='S'){ e.preventDefault(); openAdmin(); }
+function closeAdminPanel() {
+  document.getElementById('_adm')?.classList.remove('open');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+    e.preventDefault();
+    openAdminPanel();
+  }
 });
