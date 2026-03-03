@@ -1,5 +1,5 @@
 const SUPABASE_URL      = "https://kyoyfvgdeabkylhggpto.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_w3raQHwmbYrnakIOUHbmgQ_kfXgTqIQ"; // это для чтения а не управления, пояснение для чайников блять
+const SUPABASE_ANON_KEY = "sb_publishable_w3raQHwmbYrnakIOUHbmgQ_kfXgTqIQ";
 
 const DISCORD_WEBHOOK_URL = "";
 const TELEGRAM_BOT_TOKEN  = "";
@@ -31,7 +31,9 @@ const tagData = {
   "unique": { desc: "Features original or never-before-seen gameplay.", color: "#00ffd4" },
   "wave": { desc: "Gameplay heavily focused on the Wave mode.", color: "#0099ff" },
   "xl": { desc: "Extra long level, typically over 2 minutes.", color: "#ff9900" },
-  "xl+": { desc: "Extremely long level (Marathon length).", color: "#ff3300" }
+  "xl+": { desc: "Extremely long level (Marathon length).", color: "#ff3300" },
+  "special": { desc: "Features unique mechanics or special events.", color: "#cccccc" },
+  "unique": { desc: "Features original or never-before-seen gameplay.", color: "#00ffcc" }
 };
 
 function sbHeaders() {
@@ -534,5 +536,22 @@ async function init() {
     console.error("[d3n1GDPS]", err);
   }
 }
+
+(function () {
+  let holdTimer = null;
+
+  const logo = document.querySelector('.logo');
+  if (!logo) return;
+
+  logo.addEventListener('touchstart', () => {
+    holdTimer = setTimeout(() => {
+      navigator.vibrate?.(80);
+      openAdminPanel();
+    }, 2000);
+  }, { passive: true });
+
+  logo.addEventListener('touchend', () => clearTimeout(holdTimer));
+  logo.addEventListener('touchmove', () => clearTimeout(holdTimer));
+})();
 
 init();

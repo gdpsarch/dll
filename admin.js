@@ -13,10 +13,29 @@ let adminLevels = [];
 let editingId   = null;
 let formTags    = [];
 let dragSrcIdx  = null;
+let _serviceKey = null;
+
+function resolveServiceKey() {
+  if (_serviceKey) return _serviceKey;
+  try {
+    _serviceKey = atob(CONFIG._sa) + atob(CONFIG._sb);
+    return _serviceKey;
+  } catch {
+    return null;
+  }
+}
 
 function getDb() {
   if (!window._d3n1) throw new Error('app.js not loaded yet');
-  return { url: window._d3n1.SUPABASE_URL, h: window._d3n1.sbHeaders() };
+  const key = resolveServiceKey() || window._d3n1.SUPABASE_ANON_KEY;
+  return {
+    url: window._d3n1.SUPABASE_URL,
+    h: {
+      'Content-Type': 'application/json',
+      'apikey': key,
+      'Authorization': `Bearer ${key}`
+    }
+  };
 }
 
 async function sha256(str) {
@@ -88,9 +107,10 @@ async function persistPositions() {
   const { url, h } = getDb();
   const headers = { ...h, 'Prefer': 'resolution=merge-duplicates' };
   const rows = adminLevels.map((l, i) => ({ id: l.id, position: i + 1 }));
-  await fetch(`${url}/rest/v1/levels`, {
+  const r = await fetch(`${url}/rest/v1/levels`, {
     method: 'POST', headers, body: JSON.stringify(rows)
   });
+  if (!r.ok) { showAdminSt('Order save failed', 'err'); return; }
   adminLevels.forEach((l, i) => { l.position = i + 1; });
   if (window._d3n1?.reload) window._d3n1.reload();
   showAdminSt('Order saved ✓', 'ok');
@@ -115,7 +135,7 @@ function renderAdminList() {
       <span class="adm-r">#${l.position}</span>
       <div class="adm-inf">
         <div class="adm-nm">${escAdm(l.name)}</div>
-        <div class="adm-sub">${escAdm(l.creator || '—')} · Verifier: ${escAdm(l.verifier || '???')} · ${escAdm(l.length || '—')}</div>
+        <div class="adm-sub">${escAdm(l.creator || '—')} · ${escAdm(l.verifier || '???')} · ${escAdm(l.length || '—')}</div>
       </div>
       <span class="adm-pts">${l.points || 0} pts</span>
       ${l.is_verified ? '<span class="adm-vbadge">✓ Verified</span>' : ''}
@@ -389,7 +409,6 @@ function injectAdminPanel() {
             <span id="_aff-title">Add New Level</span>
             <button id="_aff-cls">✕</button>
           </div>
-
           <div class="adm-fgrid">
             <div class="adm-fg">
               <label class="adm-fl">Position</label>
@@ -404,7 +423,6 @@ function injectAdminPanel() {
               <input class="adm-fi" type="text" id="_ff-name" placeholder="Level name" />
             </div>
           </div>
-
           <div class="adm-fgrid">
             <div class="adm-fg">
               <label class="adm-fl">Creator</label>
@@ -420,14 +438,12 @@ function injectAdminPanel() {
               <input class="adm-fi" type="text" id="_ff-publisher" placeholder="Publisher name" />
             </div>
           </div>
-
           <div class="adm-fgrid-full">
             <div class="adm-fg">
               <label class="adm-fl">Video URL <small>(YouTube / Google Drive)</small></label>
               <input class="adm-fi" type="url" id="_ff-vid" placeholder="https://..." />
             </div>
           </div>
-
           <div class="adm-fgrid-3">
             <div class="adm-fg">
               <label class="adm-fl">Points</label>
@@ -442,14 +458,11 @@ function injectAdminPanel() {
               <input class="adm-fi" type="number" id="_ff-objects" placeholder="e.g. 45000" />
             </div>
           </div>
-
           <div class="adm-tags-section">
             <div class="adm-tags-label">Tags — click to toggle</div>
             <div id="_ff-tags-wrap"></div>
           </div>
-
           <div style="height:8px"></div>
-
           <div id="_aff-foot">
             <button id="_aff-cancel-btn">Cancel</button>
             <button id="_aff-save-btn">✓ Save</button>
@@ -525,7 +538,7 @@ function closeAdminPanel() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
     e.preventDefault();
     openAdminPanel();
   }
