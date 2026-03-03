@@ -478,9 +478,7 @@ input, select { font-family: inherit; }
 .editors-list li {
   font-size: .84rem; font-weight: 700; color: var(--text-muted);
   display: flex; align-items: center; gap: .4rem;
-  transition: transform 0.2s ease;
 }
-.editors-list li:hover { transform: translateX(4px); color: var(--text); }
 
 .role-icon { font-size: .8rem; }
 
