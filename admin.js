@@ -13,21 +13,10 @@ let adminLevels = [];
 let editingId   = null;
 let formTags    = [];
 let dragSrcIdx  = null;
-let _serviceKey = null;
-
-function resolveServiceKey() {
-  if (_serviceKey) return _serviceKey;
-  try {
-    _serviceKey = atob(CONFIG._sa) + atob(CONFIG._sb);
-    return _serviceKey;
-  } catch {
-    return null;
-  }
-}
 
 function getDb() {
   if (!window._d3n1) throw new Error('app.js not loaded yet');
-  const key = resolveServiceKey() || window._d3n1.SUPABASE_ANON_KEY;
+  const key = window._d3n1.SUPABASE_ANON_KEY;
   return {
     url: window._d3n1.SUPABASE_URL,
     h: {
@@ -104,16 +93,17 @@ async function adminDeleteLevel(id, name) {
 }
 
 async function persistPositions() {
-  const { url, h } = getDb();
-  const headers = { ...h, 'Prefer': 'resolution=merge-duplicates' };
-  const rows = adminLevels.map((l, i) => ({ id: l.id, position: i + 1 }));
-  const r = await fetch(`${url}/rest/v1/levels`, {
-    method: 'POST', headers, body: JSON.stringify(rows)
-  });
-  if (!r.ok) { showAdminSt('Order save failed', 'err'); return; }
-  adminLevels.forEach((l, i) => { l.position = i + 1; });
-  if (window._d3n1?.reload) window._d3n1.reload();
-  showAdminSt('Order saved ✓', 'ok');
+  try {
+    for (let i = 0; i < adminLevels.length; i++) {
+      const l = adminLevels[i];
+      await dbRequest(`levels?id=eq.${l.id}`, 'PATCH', { position: i + 1 });
+    }
+    if (window._d3n1?.reload) window._d3n1.reload();
+    showAdminSt('Order saved ✓', 'ok');
+  } catch (e) {
+    console.error('[persistPositions] error:', e.message);
+    showAdminSt('Order save failed: ' + e.message, 'err');
+  }
 }
 
 function updateAdminCount() {
@@ -169,6 +159,7 @@ function renderAdminList() {
       if (dragSrcIdx === null || dragSrcIdx === i) return;
       const moved = adminLevels.splice(dragSrcIdx, 1)[0];
       adminLevels.splice(i, 0, moved);
+      adminLevels.forEach((l, idx) => { l.position = idx + 1; });
       renderAdminList();
       persistPositions();
     });
