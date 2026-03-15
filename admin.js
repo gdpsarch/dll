@@ -5,7 +5,7 @@ const ADMIN_HASH = '1615bb6419bb051d63e6cb9894dd5f99912275516b670757c928916eef21
 const ALL_TAGS = [
   'collab','dual','fast','flash','flow','layout','long','medium',
   'memory','nerfed','silent','spammy','special','sync','timing',
-  'unique','wave','xl','xl+'
+  'unique','wave','xl','xl+', 'megacollab'
 ];
 
 let adminAuthed = false;

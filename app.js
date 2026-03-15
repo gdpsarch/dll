@@ -33,7 +33,8 @@ const tagData = {
   "xl": { desc: "Extra long level, typically over 2 minutes.", color: "#ff9900" },
   "xl+": { desc: "Extremely long level (Marathon length).", color: "#ff3300" },
   "special": { desc: "Features unique mechanics or special events.", color: "#cccccc" },
-  "unique": { desc: "Features original or never-before-seen gameplay.", color: "#00ffcc" }
+  "unique": { desc: "Features original or never-before-seen gameplay.", color: "#00ffcc" },
+  "megacollab": { desc: "A massive community project.", color: "#6C2DC7" }
 };
 
 function sbHeaders() {
