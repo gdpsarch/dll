@@ -13,6 +13,7 @@ let adminLevels = [];
 let editingId   = null;
 let formTags    = [];
 let dragSrcIdx  = null;
+let autoPointsEnabled = true;
 
 function getDb() {
   if (!window._d3n1) throw new Error('app.js not loaded yet');
@@ -25,6 +26,10 @@ function getDb() {
       'Authorization': `Bearer ${key}`
     }
   };
+}
+
+function calculateAutoPoints(position, totalLevels) {
+  return 50 * (totalLevels - position + 1);
 }
 
 async function sha256(str) {
@@ -53,8 +58,15 @@ async function loadAdminLevels() {
 
 function buildPayload(f) {
   const verifier = f.verifier.trim() || '???';
+  const position = parseInt(f.position) || 1;
+  
+  let points = parseFloat(f.points) || 0;
+  if (autoPointsEnabled) {
+    points = calculateAutoPoints(position, adminLevels.length);
+  }
+  
   return {
-    position:        parseInt(f.position) || 1,
+    position:        position,
     level_id:        f.level_id.trim(),
     name:            f.name.trim(),
     difficulty_icon: 'extreme_demon',
@@ -63,7 +75,7 @@ function buildPayload(f) {
     publisher:       f.publisher.trim(),
     video_url:       f.video_url.trim(),
     tags:            f.tags,
-    points:          parseFloat(f.points) || 0,
+    points:          points,
     length:          f.length.trim(),
     objects:         parseInt(f.objects) || 0,
     is_verified:     verifier !== '???'
@@ -96,7 +108,13 @@ async function persistPositions() {
   try {
     for (let i = 0; i < adminLevels.length; i++) {
       const l = adminLevels[i];
-      await dbRequest(`levels?id=eq.${l.id}`, 'PATCH', { position: i + 1 });
+      const updateData = { position: i + 1 };
+      
+      if (autoPointsEnabled) {
+        updateData.points = calculateAutoPoints(i + 1, adminLevels.length);
+      }
+      
+      await dbRequest(`levels?id=eq.${l.id}`, 'PATCH', updateData);
     }
     if (window._d3n1?.reload) window._d3n1.reload();
     showAdminSt('Order saved ✓', 'ok');
@@ -437,7 +455,7 @@ function injectAdminPanel() {
           </div>
           <div class="adm-fgrid-3">
             <div class="adm-fg">
-              <label class="adm-fl">Points (disabled)</label>
+              <label class="adm-fl">Points (Disabled)</label>
               <input class="adm-fi" type="number" id="_ff-points" placeholder="e.g. 250" step="0.1" disabled />
             </div>
             <div class="adm-fg">
