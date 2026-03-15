@@ -437,8 +437,8 @@ function injectAdminPanel() {
           </div>
           <div class="adm-fgrid-3">
             <div class="adm-fg">
-              <label class="adm-fl">Points</label>
-              <input class="adm-fi" type="number" id="_ff-points" placeholder="e.g. 250" step="0.1" />
+              <label class="adm-fl">Points (disabled)</label>
+              <input class="adm-fi" type="number" id="_ff-points" placeholder="e.g. 250" step="0.1" disabled />
             </div>
             <div class="adm-fg">
               <label class="adm-fl">Length <small>e.g. 1m 14s</small></label>
